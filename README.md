@@ -1,34 +1,69 @@
-# Homework Library
+# Homework — erxes plugin
 
-A Mongolian teacher workspace and Chrome side panel for generating, organizing, and sharing lesson exercises. The Next.js API uses local MongoDB and stores private PDF uploads on disk. No Supabase account or migration is required.
+Homework turns a lesson into ready-to-use practice. A teacher enters what they
+taught (typed text, a PDF, or Mongolian voice dictation) and gets two editable
+sets: quick in-class checks and independent homework, each with answers and
+explanations. Sets can be kept private or published to the organization's
+library, where colleagues copy, rate and print them as student or teacher
+worksheets.
 
-## Local setup
+It is a standard erxes plugin: teachers use their erxes accounts, data lives
+in the organization's erxes database, and access is granted through erxes
+permissions.
 
-1. Install Node.js 22 and pnpm, then run `pnpm install`.
-2. Start MongoDB. With Docker Compose installed, run `docker compose up -d mongodb`; the service only binds to localhost and persists data in a named volume. Alternatively, start a local `mongod` listening on `127.0.0.1:27017`.
-3. Copy `web/.env.mongodb.example` to `web/.env.local`. Set `AUTH_SECRET` to a private random value of at least 32 bytes. For example, generate one with `openssl rand -base64 48`. Keep this file private. Set `ANTHROPIC_API_KEY` if live exercise generation is required; generation otherwise uses the app's clearly labelled sample response.
-4. Run `pnpm run dev:ui` (or `pnpm --filter homework_web dev`) and open `http://localhost:3000`. Create a teacher account at `/register`.
+| Part | Path | Stack | Dev port |
+| --- | --- | --- | --- |
+| API | `api` | Node.js 22, erxes-api-shared `startPlugin`, tenant-scoped Mongoose models, Anthropic SDK | 3399 |
+| UI | `ui` | React 18 Module Federation remote (Rspack), erxes-ui, Tailwind | 3099 |
+| Identity | `erxes.json` | Plugin name `homework`, remote `homework_ui`, route `/homework` | |
 
-MongoDB creates the database and collections when the first account is registered. PDFs are kept in `data/uploads` by default and are excluded from git; set `DATA_DIR` to choose another private directory. Back up both the MongoDB database and this upload directory.
+## Selling and installing
 
-## Seed demo content
+`pnpm run package` runs the tests, builds both parts and writes
+`release/homework-<version>/` plus a `.tar.gz` of it. That archive is the
+product: an API Dockerfile with a frozen lockfile, the static UI remote and
+the buyer's guide. The buyer brings their own erxes, MongoDB, Redis, CDN and
+(optionally) Anthropic key; see [docs/installation.md](docs/installation.md).
 
-Set `DEMO_TEACHER_PASSWORD` in `web/.env.local` to a password with at least 12 characters, then run `pnpm seed`. The script creates four fictional demo teachers and twenty public sets, preserving existing rows on reruns. Demo emails are `oyun@homework.example`, `bat@homework.example`, `saran@homework.example`, and `nomin@homework.example`.
+## Develop against a local erxes
 
-## Commands
+```sh
+pnpm install
+cp .env.example .env     # REDIS_*, MONGO_URL=mongodb://127.0.0.1:27017/erxes
+pnpm run dev:api         # registers with the erxes gateway through Redis
+pnpm run dev:ui          # serves http://localhost:3099/remoteEntry.js
+```
 
-- `pnpm run dev:ui` starts the web application.
-- `pnpm run dev:api` starts the erxes plugin API scaffold.
-- `pnpm run check`, `pnpm run lint`, and `pnpm run build` validate workspace types, style, and production builds.
-- `pnpm --filter homework_extension build` builds the Chrome extension. Load `extension/dist` as an unpacked extension. `WEB_APP_URL` defaults to `http://localhost:3000` and must be HTTPS outside localhost.
-- `pnpm test` runs unit tests; `pnpm --filter homework_web test:browser` runs browser workflows.
+In the erxes checkout's `.env`, set `ENABLED_PLUGINS=...,homework`, restart
+the gateway and core-api, and open `http://localhost:3001/homework`. Without
+`ANTHROPIC_API_KEY`, generation returns a labelled sample, so the whole flow
+can be demoed offline.
 
-## Local deployment notes
+| Script | What it does |
+| --- | --- |
+| `pnpm run dev:api` / `dev:ui` | Plugin API and UI in watch mode |
+| `pnpm run codegen` | Print the API schema, generate UI GraphQL types |
+| `pnpm test` | API tests (throwaway `homework_test` database on local MongoDB) and web tests |
+| `pnpm run check` / `lint` / `build` | Type-check, lint and build every package |
+| `pnpm run package` | Build the distributable release |
 
-The app uses the `MONGODB_URI` connection only on the web server. Never expose MongoDB or the Next.js API port directly to the public internet without an authenticated ingress. Use HTTPS for remote clients, a private database bind/network, persistent backups, a strong private `AUTH_SECRET`, and a private `DATA_DIR` for uploaded PDFs. The included compose file intentionally exposes MongoDB only on loopback and is for local development.
+## How it fits erxes
 
-## API and design
+- **GraphQL**: `homework*` queries and mutations on the shared supergraph
+  (`api/src/modules/homework/graphql`).
+- **Data**: `homework_exercise_sets`, `homework_ratings`, `homework_profiles`
+  and `homework_uploads` (24-hour TTL), created through `generateModels`.
+- **Permissions**: `homeworkSetsRead`, `homeworkSetsManage`,
+  `homeworkGenerate`, with default *Teacher* and *Homework viewer* groups.
+  Resolvers check them, and the models enforce ownership.
+- **Uploads**: PDFs go through the gateway proxy at `/pl:homework/upload`.
 
-Authentication is handled by the app using scrypt password hashes and signed seven-day bearer tokens. Protected API routes verify the signature and load the teacher from MongoDB. Each generated pair is kept in one MongoDB document, so saving both sets is atomic on a standalone local MongoDB instance. PDF files are validated and owner-bound through MongoDB upload records. The browser app and extension share the API; the extension stores only the signed session token in Chrome local storage.
+Details are in [docs/erxes-integration.md](docs/erxes-integration.md); the
+rules for changing the code are in [AGENTS.md](AGENTS.md).
 
-The erxes plugin identity and deployment contract are documented in `docs/erxes-integration.md`. The homework workspace is separate from the erxes plugin packages.
+## Standalone web app and Chrome extension
+
+`web/` (Next.js with its own MongoDB and accounts) and `extension/` (a Chrome
+side panel for that web app) are the earlier standalone version. They still
+run (`pnpm dev`, `pnpm seed`, `pnpm run dev:extension`; see `web/.env.mongodb.example`)
+but are not part of the erxes plugin or its release.

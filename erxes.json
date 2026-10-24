@@ -1,8 +1,8 @@
 {
   "name": "homework",
-  "title": "homework",
-  "description": "Homework plugin for erxes",
-  "version": "0.1.0",
+  "title": "Homework",
+  "description": "Generate, edit, share and print in-class exercises and homework sets from a lesson's text, PDF or voice notes.",
+  "version": "1.0.0",
   "api": {
     "framework": "platform",
     "runtime": "node",
@@ -15,7 +15,7 @@
     "port": 3099,
     "name": "homework",
     "remote": "homework_ui",
-    "path": "homework_ui",
+    "path": "homework",
     "entry": "http://localhost:3099"
   }
 }
