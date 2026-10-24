@@ -3,3 +3,9 @@ dist
 api/generated
 ui/src/gql
 .env
+.env.local
+.env.*.local
+.next
+*.tsbuildinfo
+test-results
+playwright-report

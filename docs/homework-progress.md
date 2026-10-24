@@ -1,0 +1,7 @@
+# Homework Library implementation
+
+The requested product is added in `web/` and `extension/` alongside the erxes scaffold. It uses separate Supabase authentication and data. No existing database is reset.
+
+## Phase 1
+
+Next.js, TypeScript, Tailwind, a typed Supabase client, Mongolian strings, and the SQL migration are scaffolded. Run `pnpm dev` for the web app on port 3000. Copy `web/.env.example` to `web/.env.local` and apply the SQL migration to a Supabase project. Authentication and the library arrive in the next phases. No credentials are supplied or invented.

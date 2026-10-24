@@ -1,4 +1,20 @@
-# Lesson
+# Даалгаврын сан — Homework Library
+
+The homework product described in `prompt.md` lives in `web/` (Next.js) and `extension/` (Chrome side panel). The original erxes scaffold remains in `api/` and `ui/`.
+
+## Run the homework web app
+
+1. Use Node.js 22 and `pnpm install`.
+2. Copy `web/.env.example` to `web/.env.local`. Fill in the Supabase project URL and anonymous key. Secrets belong only in `.env.local`.
+3. In a **new Supabase project**, apply `supabase/migrations/202610240001_homework_library.sql` with the SQL editor. It creates the tables, RLS, profile trigger, atomic copy/save functions, and a private PDF storage bucket. It does not reset a database.
+4. Enable email/password authentication. Set the Auth Site URL to `http://localhost:3000` for local development. For a hackathon, either configure confirmation email delivery or explicitly disable confirmation in the Supabase dashboard.
+5. Run `pnpm dev` and visit `http://localhost:3000`.
+
+`ANTHROPIC_API_KEY` is optional: without it, generation returns a clearly labelled, fixed Mongolian fractions example. Supabase is required for real accounts, storage, and saving; missing configuration shows a Mongolian setup message. The service-role key is used only by the explicit seed script, never by normal app requests.
+
+Run `pnpm run check`, `pnpm run lint`, `pnpm run test`, and `pnpm run build` to validate. Phase notes are in `docs/homework-progress.md`.
+
+## Original erxes scaffold
 
 Lesson plugin for erxes
 

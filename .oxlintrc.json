@@ -1,5 +1,5 @@
 {
-  "ignorePatterns": ["ui/src/gql", "api/generated"],
+  "ignorePatterns": ["ui/src/gql", "api/generated", "**/.next/**", "**/dist/**"],
   "overrides": [
     {
       "files": ["ui/**/*.ts", "ui/**/*.tsx"],
