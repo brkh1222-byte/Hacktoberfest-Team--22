@@ -4,4 +4,8 @@ node_modules
 **/generated
 ui/src/gql
 **/.env
+**/.env.local
+**/.next
 .git
+release
+data

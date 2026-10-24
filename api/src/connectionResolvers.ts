@@ -1,14 +1,25 @@
 import type { IMainContext } from "erxes-api-shared/core-types";
 import { createGenerateModels } from "erxes-api-shared/utils";
 import type { Connection } from "mongoose";
+import type {
+  IExerciseSetDocument,
+  IProfileDocument,
+  IRatingDocument,
+  IUploadDocument,
+} from "./modules/homework/db/definitions/homework.ts";
 import {
-  type ISampleModel,
-  loadSampleClass,
-} from "./modules/sample/db/models/Sample.ts";
-import type { ISampleDocument } from "./modules/sample/db/definitions/sample.ts";
+  type IExerciseSetModel,
+  loadExerciseSetClass,
+} from "./modules/homework/db/models/ExerciseSets.ts";
+import { type IProfileModel, loadProfileClass } from "./modules/homework/db/models/Profiles.ts";
+import { type IRatingModel, loadRatingClass } from "./modules/homework/db/models/Ratings.ts";
+import { type IUploadModel, loadUploadClass } from "./modules/homework/db/models/Uploads.ts";
 
 export interface IModels {
-  Samples: ISampleModel;
+  ExerciseSets: IExerciseSetModel;
+  Ratings: IRatingModel;
+  Uploads: IUploadModel;
+  Profiles: IProfileModel;
 }
 
 /**
@@ -28,9 +39,21 @@ export type Context = Omit<IMainContext, "models"> & {
 const loadClasses = (db: Connection) => {
   const models = {} as IModels;
 
-  models.Samples = db.model<ISampleDocument, ISampleModel>(
-    "lesson_samples",
-    loadSampleClass(models),
+  models.ExerciseSets = db.model<IExerciseSetDocument, IExerciseSetModel>(
+    "homework_exercise_sets",
+    loadExerciseSetClass(models),
+  );
+  models.Ratings = db.model<IRatingDocument, IRatingModel>(
+    "homework_ratings",
+    loadRatingClass(models),
+  );
+  models.Uploads = db.model<IUploadDocument, IUploadModel>(
+    "homework_uploads",
+    loadUploadClass(models),
+  );
+  models.Profiles = db.model<IProfileDocument, IProfileModel>(
+    "homework_profiles",
+    loadProfileClass(models),
   );
 
   return models;

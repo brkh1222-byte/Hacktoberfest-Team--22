@@ -1,7 +1,7 @@
-# How lesson plugs into erxes
+# How homework plugs into erxes
 
 erxes discovers this plugin at runtime through the same Redis used by the API.
-Enable `lesson` in `ENABLED_PLUGINS` on the gateway and core-api, and restart
+Enable `homework` in `ENABLED_PLUGINS` on the gateway and core-api, and restart
 them. No monorepo workspace or source import is required.
 
 ## Names
@@ -10,11 +10,11 @@ All of these come from `erxes.json`. They must stay consistent.
 
 | Name           | Value                      | Used by                                                        |
 | -------------- | -------------------------- | -------------------------------------------------------------- |
-| `name`         | `lesson`                 | Redis keys, `ENABLED_PLUGINS`, CDN folder, docker host         |
-| `ui.name`      | `lesson`                 | `CONFIG.name`, permissions, page expose `./lesson`                          |
-| `ui.remote`    | `lesson_ui`               | Module Federation container (core-api derives it from `name`)  |
-| `ui.path`      | `lesson`                 | Route `/lesson/*` in core-ui                                 |
-| GraphQL prefix | `lesson` / `Lesson` | Operation, field and type names (unique across the supergraph) |
+| `name`         | `homework`                 | Redis keys, `ENABLED_PLUGINS`, CDN folder, docker host         |
+| `ui.name`      | `homework`                 | `CONFIG.name`, permissions, page expose `./homework`                          |
+| `ui.remote`    | `homework_ui`               | Module Federation container (core-api derives it from `name`)  |
+| `ui.path`      | `homework`                 | Route `/homework/*` in core-ui                                 |
+| GraphQL prefix | `homework` / `Homework` | Operation, field and type names (unique across the supergraph) |
 
 **Dashed names:** `inventory` maps to `inventory_ui` / `./inventory`;
 `inventory-tools` maps to the container `inventory_tools_ui`, page expose
@@ -29,8 +29,8 @@ authorization remains required regardless of host route guards.
 ## API registration
 
 On start, erxes-api-shared `startPlugin` writes what
-`joinErxesGateway` writes: the `erxesservice:config:lesson` JSON
-(`uiEntry` from `UI_ENTRY_URL`), the `erxes-service-lesson` address, and
+`joinErxesGateway` writes: the `erxesservice:config:homework` JSON
+(`uiEntry` from `UI_ENTRY_URL`), the `erxes-service-homework` address, and
 in production the router-update lock plus the BullMQ
 `gateway-update-apollo-router` job.
 
@@ -49,18 +49,18 @@ The gateway only composes plugins listed in its `ENABLED_PLUGINS`.
 
 ## UI loading
 
-1. core-api `GET /get-frontend-plugins` returns `{ name: "lesson_ui", entry }`
+1. core-api `GET /get-frontend-plugins` returns `{ name: "homework_ui", entry }`
    for each enabled plugin. `entry` is the registered `uiEntry`, or
-   `https://plugins.erxes.io/<releaseVersion>/lesson_ui/remoteEntry.js`.
-2. core-ui loads `lesson_ui/config` and reads the exported `CONFIG`.
-3. core-ui routes `/<CONFIG.path>/*` to `lesson_ui/<CONFIG.name>`, rendering
-   the page component `Lesson`. The page owns its `AppLayout`, sidebar and
-   nested settings route `/lesson/settings`. CONFIG supplies a navigation
+   `https://plugins.erxes.io/<releaseVersion>/homework_ui/remoteEntry.js`.
+2. core-ui loads `homework_ui/config` and reads the exported `CONFIG`.
+3. core-ui routes `/<CONFIG.path>/*` to `homework_ui/<CONFIG.name>`, rendering
+   the page component `Homework`. The page owns its `AppLayout`, sidebar and
+   nested settings route `/homework/settings`. CONFIG supplies a navigation
    group `defaultPath` and module paths relative to the host root, including the
-   plugin prefix (for example, `lesson/records`, not just `records`). Sidebar
+   plugin prefix (for example, `homework/sets`, not just `records`). Sidebar
    links use a leading `/`; CONFIG paths do not. The host does not use
    the old `settingsNavigation` or navigation-group `content`/`subGroup` slots.
-   Only `./config` and `./lesson` are baseline exposes; add optional widgets
+   Only `./config` and `./homework` are baseline exposes; add optional widgets
    when there is actual functionality behind them.
 4. The `hostShared` list in `ui/rspack.config.ts` — `react`, `react-dom`,
    `react-router`, `react-router-dom`, `@apollo/client`, `jotai`,
@@ -145,7 +145,7 @@ plugin.
 ## Styling
 
 core-ui ships Tailwind preflight and unprefixed utilities for its own code.
-This remote compiles its own utilities with the `lesson:` prefix
+This remote compiles its own utilities with the `homework:` prefix
 (`ui/src/styles.css`), mapped to the host's design tokens (`--background`,
 `--muted-foreground`, …). The prefix keeps the plugin's CSS from overriding
 the host or other plugins. `erxes-ui` components come pre-styled by the host's
@@ -156,26 +156,44 @@ own CSS — no extra setup needed.
 core-ui guards the route with `hasPluginPermission(CONFIG.name)`, which only
 restricts plugins that core-api lists in `pluginsWithPermissions`, i.e. plugins
 whose registered `meta.permissions` declares modules or default groups.
-The registered API permission plugin and `CONFIG.name` both use `lesson`,
-including dashes. The normalized container `lesson_ui` is only a loading key;
+The registered API permission plugin and `CONFIG.name` both use `homework`,
+including dashes. The normalized container `homework_ui` is only a loading key;
 it must never replace that public permission identity.
 Enforce access in the API resolvers, never only in the UI.
 
-On the platform stack, `api/src/permissions.ts` declares
-`lessonSamplesRead` and `main.ts` registers it as `meta.permissions`.
-The sample list requires a user, a tenant and `await checkPermission(action)`
-before reading `context.models.Samples`. An administrator must grant the
-sample module's read action with `all` scope (or use an owner account). There
-are no automatic default grants. `all` means this tenant only: the model
-factory selects the tenant's database. The example deliberately does not
-advertise own/group scopes without implementing corresponding row filters.
+`api/src/permissions.ts` declares one module, `homeworkSets`, with three
+actions, and registers it as `meta.permissions`:
 
-The sample query accepts `limit` (default 20, range 1–100) and `offset`
-(default 0, range 0–10000), applies both in Mongo and sorts by `createdAt` and
-`_id`. The platform UI shows loading, denied/error, empty and paginated states.
-The status query is a diagnostic and does not read sample data. Standalone
-frameworks provide only the diagnostic query; add real authorization before
-adding application data.
+| Action | Guards |
+| --- | --- |
+| `homeworkSetsRead` | `homeworkSets`, `homeworkSet`, `homeworkProfile`, `homeworkConfig` |
+| `homeworkSetsManage` | saving, editing, publishing, copying, rating, deleting, profile updates |
+| `homeworkGenerate` | `homeworkGenerate` and the PDF upload route |
+
+Two default groups, **Teacher** (all three) and **Homework viewer** (read),
+let an administrator grant access without assembling actions by hand; owner
+accounts pass every check. Every resolver first requires a user and a tenant
+and awaits `checkPermission(action)`; the models then enforce ownership on top
+of it: lookups by id only match public sets or the caller's own, and updates
+and deletes match `ownerId`. The only scope advertised is `all`, meaning this
+tenant: the model factory selects the tenant's database, and ownership is
+never relaxed by scope.
+
+`homeworkSets` accepts `limit` (default 12, range 1–100) and `offset`
+(0–10000), applied in Mongo and sorted with `_id` as the tiebreaker. The UI
+shows loading, denied/error, empty and paginated states for every query and
+refetches lists after each mutation.
+
+## PDF uploads
+
+Lesson PDFs (up to 10 MB) do not fit through the Apollo Router's request size
+limit, so the browser posts them to the gateway's plugin proxy,
+`POST <gateway>/pl:homework/upload` with `Content-Type: application/pdf`.
+The gateway authenticates the cookie and forwards `userid` and `hostname`;
+the route loads that user from core over tRPC, checks `homeworkGenerate`
+with the same permission function the GraphQL context uses, validates the PDF
+signature and stores it in `homework_uploads` for the owner with a 24-hour
+TTL. `homeworkGenerate` then reads it by id, owner-only.
 
 ## Trusted gateway boundary
 
@@ -199,7 +217,7 @@ reach the API directly; parsing it is not independent authentication.
 Install and retain the generated lockfile before the API Docker build. Supply
 MongoDB (platform stack), Redis and gateway addressing through deployment
 environment variables. Redis must be the same service/database erxes uses.
-The API address (`LOAD_BALANCER_ADDRESS` or `plugin-lesson-api:<port>`) must be
+The API address (`LOAD_BALANCER_ADDRESS` or `plugin-homework-api:<port>`) must be
 reachable by the gateway; it is not the UI address. Production registration
 must keep the router-update BullMQ job so the gateway recomposes.
 
