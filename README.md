@@ -14,6 +14,18 @@ The homework product described in `prompt.md` lives in `web/` (Next.js) and `ext
 
 Run `pnpm run check`, `pnpm run lint`, `pnpm run test`, and `pnpm run build` to validate. Phase notes are in `docs/homework-progress.md`.
 
+### Demo library
+
+Set `SUPABASE_SERVICE_ROLE_KEY` and a private `DEMO_TEACHER_PASSWORD` (at least 12 characters) in `web/.env.local`, then run `pnpm seed`. The script creates four confirmed demo teacher accounts and twenty realistic public sets across mathematics, physics, Mongolian, and English for grades 5–11. It preserves existing rows on reruns and never resets the database. Demo emails are `oyun@homework.example`, `bat@homework.example`, `saran@homework.example`, and `nomin@homework.example`; their password is the value you supplied. Use a dedicated demo Supabase project.
+
+### Web API and provider boundaries
+
+All business logic runs in the web server. Requests carry `Authorization: Bearer <Supabase access token>`; every data route verifies the token with Supabase and uses the anonymous key plus that teacher's token so RLS still applies. No cookie authentication or service-role bypass is used. API CORS allows explicit bearer-token clients without cookies. Endpoints: `GET /api/me`, `GET /api/sets` (bounded 12-row pages), `GET/PATCH/DELETE /api/sets/:id`, `POST /api/sets/:id/copy`, `POST /api/sets/:id/rating`, `POST /api/uploads`, `POST /api/generate`, and `POST /api/generations`.
+
+Database calls live in `web/src/lib/db/`; AI calls are behind `generateExerciseSets` in `web/src/lib/ai/`; voice recognition is behind `SpeechProvider` in `web/src/lib/speech/`. The Claude model is exactly `claude-sonnet-5-5`, as requested. Its live availability must be verified with your Anthropic account; provider failures are shown as a Mongolian error, never disguised as successful AI generation. PDF uploads are private, limited to 10 MiB, and forwarded directly as a Claude document block. The adapter does not parse PDFs locally.
+
+Student exports omit answer keys; teacher exports include them. Open a set's student/teacher print view and use the browser's print-to-PDF destination. Speech recognition availability and `mn-MN` accuracy depend on the browser; text entry always works.
+
 ## Original erxes scaffold
 
 Lesson plugin for erxes

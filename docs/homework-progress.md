@@ -13,3 +13,7 @@ Added email/password login, registration with teacher details, a protected perso
 ## Phase 3
 
 Added `/generate`, private PDF uploads, direct Claude document inputs, `mn-MN` speech recognition with editable textarea fallback, two-set editing, and atomic private/public saves. Run `pnpm dev` and open `/generate` after signing in. `claude-sonnet-5-5` is isolated in `web/src/lib/ai/generate.ts`; malformed JSON gets one retry. Without the Anthropic key, the UI explicitly labels the fixed Mongolian fractions fixture as a mock. Supabase and browser speech recognition are not mocked.
+
+## Phase 4
+
+Added the searchable public library, filters and sorting, set details, owner editing and publication controls, atomic copying, ratings, answer-key toggles, text export, and student/teacher print views. Run `pnpm dev` and visit `/library`. Run `pnpm seed` only after configuring the service-role key and your demo password to create four demo teachers and twenty public sets. Seed data is fictional instructional content; ratings/copy counts are real and are not artificially inflated. Live Supabase verification still requires project credentials.
