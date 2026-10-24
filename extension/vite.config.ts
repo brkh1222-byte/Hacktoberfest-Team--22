@@ -13,8 +13,7 @@ if (
   (webUrl.protocol === "http:" && !["localhost", "127.0.0.1"].includes(webUrl.hostname))
 )
   throw new Error("WEB_APP_URL must use HTTPS except on localhost.");
-const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || "";
-const hosts = [`${webUrl.origin}/*`, ...(supabaseUrl ? [`${new URL(supabaseUrl).origin}/*`] : [])];
+const hosts = [`${webUrl.origin}/*`];
 
 export default defineConfig({
   envPrefix: [],
@@ -24,10 +23,6 @@ export default defineConfig({
   },
   define: {
     __WEB_APP_URL__: JSON.stringify(webUrl.origin),
-    "process.env.NEXT_PUBLIC_SUPABASE_URL": JSON.stringify(supabaseUrl),
-    "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(
-      env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-    ),
   },
   esbuild: { jsx: "automatic" },
   css: { postcss: { plugins: [tailwind()] } },
@@ -42,7 +37,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ["react", "react-dom"],
-          supabase: ["@supabase/supabase-js"],
           validation: ["zod"],
         },
         entryFileNames: (chunk) =>

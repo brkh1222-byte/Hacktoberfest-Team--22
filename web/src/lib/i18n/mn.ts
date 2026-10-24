@@ -37,7 +37,7 @@ export const mn = {
   back: "Буцах",
   setupTitle: "Эхлээд холболтоо тохируулъя",
   setupMessage:
-    "Supabase холболт тохируулагдаагүй байна. Төслийн README зааврын дагуу .env.local файлыг бөглөөд серверээ дахин асаана уу.",
+    "MongoDB эсвэл AUTH_SECRET тохируулаагүй байна. web/.env.local тохируулж, локал MongoDB серверээ асаагаад дахин оролдоно уу.",
   error: "Үйлдэл амжилтгүй боллоо. Дахин оролдоно уу.",
   networkError: "Сүлжээний холболтоо шалгаад дахин оролдоно уу.",
   unauthorized: "Үргэлжлүүлэхийн тулд нэвтэрнэ үү.",
@@ -152,7 +152,7 @@ export const mn = {
   countHint: "Багц бүр 1–20 асуулттай байна.",
   footer: "Багш нар бүтээж, багш нар хуваалцана.",
   seedNotConfigured:
-    "Supabase түлхүүрүүд болон DEMO_TEACHER_PASSWORD-ийг web/.env.local файлд тохируулна уу.",
+    "MONGODB_URI, AUTH_SECRET болон DEMO_TEACHER_PASSWORD-ийг web/.env.local файлд тохируулна уу.",
   subjects: [
     "Математик",
     "Физик",

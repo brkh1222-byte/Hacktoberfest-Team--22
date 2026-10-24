@@ -1,86 +1,61 @@
+import mongoose, { type PipelineStage } from "mongoose";
 import { z } from "zod";
 import { ApiError } from "../http";
 import { mn } from "../i18n/mn";
 import type { SetUpdate } from "../schema";
+import { GenerationModel } from "./models";
 import type { TeacherContext } from "./server";
-import type { SetPage } from "./types";
+import type { ExerciseSet, SetPage } from "./types";
 
-const filtersSchema = z.object({
-  scope: z.enum(["library", "mine"]).default("library"),
-  page: z.coerce.number().int().min(1).max(500).default(1),
-  q: z.string().max(150).default(""),
-  subject: z.string().max(80).optional(),
-  grade: z.coerce.number().int().min(1).max(12).optional(),
-  set_type: z.enum(["in_class", "homework"]).optional(),
-  difficulty: z.enum(["easy", "medium", "hard"]).optional(),
-  sort: z.enum(["newest", "copies", "rating"]).default("newest"),
-});
-export async function listSets(
-  context: TeacherContext,
-  parameters: URLSearchParams,
-): Promise<SetPage> {
-  const filters = filtersSchema.parse(
-    Object.fromEntries([...parameters].filter(([, value]) => value !== "")),
-  );
+const filtersSchema = z.object({ scope: z.enum(["library", "mine"]).default("library"), page: z.coerce.number().int().min(1).max(500).default(1), q: z.string().max(150).default(""), subject: z.string().max(80).optional(), grade: z.coerce.number().int().min(1).max(12).optional(), set_type: z.enum(["in_class", "homework"]).optional(), difficulty: z.enum(["easy", "medium", "hard"]).optional(), sort: z.enum(["newest", "copies", "rating"]).default("newest") });
+type SetAggregate = ExerciseSet;
+export async function listSets(context: TeacherContext, parameters: URLSearchParams): Promise<SetPage> {
+  const f = filtersSchema.parse(Object.fromEntries([...parameters].filter(([, value]) => value !== "")));
   const pageSize = 12;
-  let query = context.db.from("exercise_set_details").select("*", { count: "exact" });
-  query =
-    filters.scope === "mine"
-      ? query.eq("owner_id", context.userId)
-      : query.eq("visibility", "public");
-  if (filters.subject) query = query.eq("subject", filters.subject);
-  if (filters.grade) query = query.eq("grade", filters.grade);
-  if (filters.set_type) query = query.eq("set_type", filters.set_type);
-  if (filters.difficulty) query = query.eq("difficulty", filters.difficulty);
-  // Escape LIKE metacharacters and PostgREST filter grammar before interpolating.
-  const search = filters.q
-    .trim()
-    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
-    .trim();
-  if (search) query = query.or(`title.ilike.%${search}%,topic.ilike.%${search}%`);
-  const column =
-    filters.sort === "copies"
-      ? "copy_count"
-      : filters.sort === "rating"
-        ? "rating_average"
-        : "created_at";
-  const { data, count, error } = await query
-    .order(column, { ascending: false })
-    .order("id", { ascending: false })
-    .range((filters.page - 1) * pageSize, filters.page * pageSize - 1);
-  if (error) throw new ApiError(500, mn.databaseError);
-  return { sets: data ?? [], total: count ?? 0, page: filters.page, pageSize };
+  const match = f.scope === "mine" ? { owner_id: context.userId } : { "sets.visibility": "public" };
+  const setMatch: Record<string, unknown> = f.scope === "mine" ? {} : { "sets.visibility": "public" };
+  if (f.subject) setMatch["sets.subject"] = f.subject;
+  if (f.grade) setMatch["sets.grade"] = f.grade;
+  if (f.set_type) setMatch["sets.set_type"] = f.set_type;
+  if (f.difficulty) setMatch["sets.difficulty"] = f.difficulty;
+  const search = f.q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (search) setMatch["$or"] = [{ "sets.title": { $regex: search, $options: "i" } }, { "sets.topic": { $regex: search, $options: "i" } }];
+  const sortField = f.sort === "newest" ? "sets.created_at" : f.sort === "copies" ? "copy_count" : "rating_average";
+  const pipeline: PipelineStage[] = [
+    { $match: match }, { $unwind: "$sets" }, { $match: setMatch },
+    { $lookup: { from: "teachers", localField: "owner_id", foreignField: "_id", as: "author" } },
+    { $lookup: { from: "lesson_generations", let: { setId: { $toString: "$sets._id" } }, pipeline: [{ $unwind: "$sets" }, { $match: { $expr: { $eq: ["$sets.copied_from_id", "$$setId"] } } }, { $count: "count" }], as: "copies" } },
+    { $addFields: { rating_list: { $filter: { input: { $ifNull: ["$ratings", []] }, as: "rating", cond: { $eq: ["$$rating.set_id", { $toString: "$sets._id" }] } } } } },
+    { $addFields: { copy_count: { $ifNull: [{ $arrayElemAt: ["$copies.count", 0] }, 0] }, rating_count: { $size: "$rating_list" }, rating_average: { $ifNull: [{ $avg: "$rating_list.stars" }, 0] }, author_name: "$author.full_name", author_school: "$author.school", id: { $toString: "$sets._id" }, owner_id: 1, title: "$sets.title", subject: "$sets.subject", grade: "$sets.grade", topic: "$sets.topic", curriculum_unit: "$sets.curriculum_unit", set_type: "$sets.set_type", difficulty: "$sets.difficulty", questions: "$sets.questions", source_type: "$sets.source_type", copied_from_id: "$sets.copied_from_id", visibility: "$sets.visibility", created_at: "$sets.created_at", updated_at: "$sets.updated_at" } },
+    { $sort: { [sortField]: -1, id: -1 } }, { $facet: { sets: [{ $skip: (f.page - 1) * pageSize }, { $limit: pageSize }], total: [{ $count: "count" }] } },
+  ];
+  const [result] = await GenerationModel.aggregate<{ sets: SetAggregate[]; total: { count: number }[] }>(pipeline);
+  return { sets: result?.sets ?? [], total: result?.total[0]?.count ?? 0, page: f.page, pageSize };
 }
 export async function getSet(context: TeacherContext, id: string) {
-  z.uuid().parse(id);
-  const { data, error } = await context.db
-    .from("exercise_set_details")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new ApiError(500, mn.databaseError);
-  if (!data) throw new ApiError(404, mn.notFound);
-  return data;
+  if (!mongoose.isValidObjectId(id)) throw new ApiError(404, mn.notFound);
+  const result = await GenerationModel.aggregate<SetAggregate>([
+    { $match: { "sets._id": new mongoose.Types.ObjectId(id), $or: [{ owner_id: context.userId }, { "sets.visibility": "public" }] } },
+    { $unwind: "$sets" }, { $match: { "sets._id": new mongoose.Types.ObjectId(id) } },
+    { $lookup: { from: "teachers", localField: "owner_id", foreignField: "_id", as: "author" } },
+    { $lookup: { from: "lesson_generations", let: { setId: { $toString: "$sets._id" } }, pipeline: [{ $unwind: "$sets" }, { $match: { $expr: { $eq: ["$sets.copied_from_id", "$$setId"] } } }, { $count: "count" }], as: "copies" } },
+    { $addFields: { rating_list: { $filter: { input: { $ifNull: ["$ratings", []] }, as: "rating", cond: { $eq: ["$$rating.set_id", { $toString: "$sets._id" }] } } } } },
+    { $addFields: { author: { $arrayElemAt: ["$author", 0] }, id: { $toString: "$sets._id" }, author_name: { $arrayElemAt: ["$author.full_name", 0] }, author_school: { $arrayElemAt: ["$author.school", 0] }, owner_id: 1, title: "$sets.title", subject: "$sets.subject", grade: "$sets.grade", topic: "$sets.topic", curriculum_unit: "$sets.curriculum_unit", set_type: "$sets.set_type", difficulty: "$sets.difficulty", questions: "$sets.questions", source_type: "$sets.source_type", copied_from_id: "$sets.copied_from_id", visibility: "$sets.visibility", created_at: "$sets.created_at", updated_at: "$sets.updated_at", copy_count: { $ifNull: [{ $arrayElemAt: ["$copies.count", 0] }, 0] }, rating_average: { $ifNull: [{ $avg: "$rating_list.stars" }, 0] }, rating_count: { $size: "$rating_list" } } },
+  ]);
+  if (!result?.[0]) throw new ApiError(404, mn.notFound);
+  return result[0];
 }
 export async function updateSet(context: TeacherContext, id: string, input: SetUpdate) {
-  const original = await getSet(context, id);
-  if (original.owner_id !== context.userId) throw new ApiError(403, mn.forbidden);
-  const { error } = await context.db
-    .from("exercise_sets")
-    .update(input)
-    .eq("id", id)
-    .eq("owner_id", context.userId);
-  if (error) throw new ApiError(500, mn.databaseError);
+  const current = await getSet(context, id);
+  if (current.owner_id !== context.userId) throw new ApiError(403, mn.forbidden);
+  const { questions, ...fields } = input;
+  const update: Record<string, unknown> = { ...Object.fromEntries(Object.entries(fields).map(([key, value]) => [`sets.$.${key}`, value])), "sets.$.questions": questions, "sets.$.updated_at": new Date() };
+  await GenerationModel.updateOne({ owner_id: context.userId, "sets._id": new mongoose.Types.ObjectId(id) }, { $set: update });
   return getSet(context, id);
 }
 export async function deleteSet(context: TeacherContext, id: string) {
-  const original = await getSet(context, id);
-  if (original.owner_id !== context.userId) throw new ApiError(403, mn.forbidden);
-  const { error } = await context.db
-    .from("exercise_sets")
-    .delete()
-    .eq("id", id)
-    .eq("owner_id", context.userId);
-  if (error) throw new ApiError(500, mn.databaseError);
+  const current = await getSet(context, id);
+  if (current.owner_id !== context.userId) throw new ApiError(403, mn.forbidden);
+  await GenerationModel.updateOne({ owner_id: context.userId }, { $pull: { sets: { _id: new mongoose.Types.ObjectId(id) } } });
   return { success: true };
 }

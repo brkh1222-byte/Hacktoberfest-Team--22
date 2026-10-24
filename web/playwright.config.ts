@@ -16,11 +16,7 @@ export default defineConfig({
     url: "http://127.0.0.1:3100/login",
     timeout: 120000,
     reuseExistingServer: false,
-    // Deliberately invalid, test-only public configuration. All browser requests
-    // to this fake auth service are intercepted; no real credentials are used.
     env: {
-      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54399",
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-only-public-placeholder",
       ANTHROPIC_API_KEY: "",
     },
   },

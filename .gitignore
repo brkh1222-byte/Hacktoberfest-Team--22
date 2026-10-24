@@ -6,6 +6,7 @@ ui/src/gql
 .env.local
 .env.*.local
 .next
+data/
 *.tsbuildinfo
 test-results
 playwright-report

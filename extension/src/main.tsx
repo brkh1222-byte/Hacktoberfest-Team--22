@@ -10,7 +10,7 @@ import "@/app/globals.css";
 import "./style.css";
 
 function Panel() {
-  const { client, session, loading } = useAuth();
+  const { ready, session, loading, signOut } = useAuth();
   const [tab, setTab] = useState<"generate" | "library" | "mine">("generate");
   const [selectedText, setSelectedText] = useState("");
   const [error, setError] = useState("");
@@ -53,15 +53,13 @@ function Panel() {
         {session && (
           <button
             className="button secondary"
-            onClick={() => {
-              void client?.auth.signOut({ scope: "local" });
-            }}
+            onClick={() => { void signOut(); }}
           >
             {mn.logout}
           </button>
         )}
       </header>
-      {!client ? (
+      {!ready ? (
         <SetupMessage />
       ) : loading ? (
         <div className="loading" role="status">
@@ -121,7 +119,7 @@ const root = document.getElementById("root");
 if (root)
   createRoot(root).render(
     <StrictMode>
-      <AuthProvider client={extensionDb} baseUrl={__WEB_APP_URL__}>
+      <AuthProvider store={extensionDb} baseUrl={__WEB_APP_URL__}>
         <Panel />
       </AuthProvider>
     </StrictMode>,

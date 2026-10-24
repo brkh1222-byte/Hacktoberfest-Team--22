@@ -1,6 +1,6 @@
 import { mn } from "./i18n/mn";
-import type { GenerationInput, GenerationResult, SaveGeneration, SetUpdate } from "./schema";
-import type { ExerciseSet, SetPage, Teacher } from "./db/types";
+import type { GenerationInput, GenerationResult, Login, Registration, SaveGeneration, SetUpdate } from "./schema";
+import type { AuthSession, ExerciseSet, SetPage, Teacher } from "./db/types";
 
 export class ClientError extends Error {
   constructor(
@@ -12,9 +12,9 @@ export class ClientError extends Error {
 }
 export type TokenProvider = () => Promise<string | null>;
 export function createApi(baseUrl: string, getToken: TokenProvider) {
-  async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-    const token = await getToken();
-    if (!token) throw new ClientError(401, mn.unauthorized);
+  async function request<T>(path: string, method = "GET", body?: unknown, authenticated = true): Promise<T> {
+    const token = authenticated ? await getToken() : null;
+    if (authenticated && !token) throw new ClientError(401, mn.unauthorized);
     let response: Response;
     try {
       const options: RequestInit = {
@@ -22,7 +22,7 @@ export function createApi(baseUrl: string, getToken: TokenProvider) {
         cache: "no-store",
         credentials: "omit",
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         },
       };
@@ -42,6 +42,8 @@ export function createApi(baseUrl: string, getToken: TokenProvider) {
     return data as T;
   }
   return {
+    login: (input: Login) => request<AuthSession>("/auth/login", "POST", input, false),
+    register: (input: Registration) => request<AuthSession>("/auth/register", "POST", input, false),
     profile: () => request<Teacher>("/me"),
     list: (parameters: URLSearchParams) => request<SetPage>(`/sets?${parameters}`),
     get: (id: string) => request<ExerciseSet>(`/sets/${id}`),
@@ -58,6 +60,7 @@ export function createApi(baseUrl: string, getToken: TokenProvider) {
     copy: (id: string) => request<{ id: string }>(`/sets/${id}/copy`, "POST"),
     rate: (id: string, stars: number) =>
       request<{ success: boolean }>(`/sets/${id}/rating`, "POST", { stars }),
+    health: () => request<{ ready: boolean }>("/health", "GET", undefined, false),
   };
 }
 export type HomeworkApi = ReturnType<typeof createApi>;

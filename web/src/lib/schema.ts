@@ -59,6 +59,11 @@ export const profileSchema = z.object({
   subjects: z.array(z.string().min(1).max(80)).min(1).max(20),
   grades: z.array(z.number().int().min(1).max(12)).min(1).max(12),
 });
+export const registrationSchema = profileSchema.extend({
+  email: z.email().trim().toLowerCase().max(254),
+  password: z.string().min(12).max(128),
+});
+export const loginSchema = z.object({ email: z.email().trim().toLowerCase().max(254), password: z.string().min(1).max(128) });
 export const setUpdateSchema = z.object({
   title: z.string().trim().min(1).max(200),
   subject: z.string().trim().min(1).max(80),
@@ -70,6 +75,7 @@ export const setUpdateSchema = z.object({
   visibility: z.enum(["private", "public"]),
 });
 export const saveGenerationSchema = z.object({
+  saveId: z.uuid(),
   input: generationSchema,
   generated: generatedSchema,
   visibility: z.enum(["private", "public"]),
@@ -78,6 +84,8 @@ export type Question = z.infer<typeof questionSchema>;
 export type GenerationInput = z.infer<typeof generationSchema>;
 export type GeneratedSets = z.infer<typeof generatedSchema>;
 export type TeacherProfile = z.infer<typeof profileSchema>;
+export type Registration = z.infer<typeof registrationSchema>;
+export type Login = z.infer<typeof loginSchema>;
 export type SetUpdate = z.infer<typeof setUpdateSchema>;
 export type SaveGeneration = z.infer<typeof saveGenerationSchema>;
 export type GenerationResult = GeneratedSets & { mocked: boolean };

@@ -6,7 +6,7 @@ import { mn } from "@/lib/i18n/mn";
 
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const { session, client } = useAuth();
+  const { session, signOut } = useAuth();
   const navigation = [
     ["/library", mn.library, "▦"],
     ["/generate", mn.generate, "+"],
@@ -44,15 +44,11 @@ export function Shell({ children }: { children: ReactNode }) {
           {session ? (
             <div className="account">
               <span className="avatar">
-                {String(session.user.user_metadata.full_name ?? mn.teacher).slice(0, 1)}
+                {session.teacher.full_name.slice(0, 1)}
               </span>
               <div>
-                <strong>{String(session.user.user_metadata.full_name ?? mn.teacher)}</strong>
-                <button
-                  onClick={() => {
-                    void client?.auth.signOut({ scope: "local" });
-                  }}
-                >
+                <strong>{session.teacher.full_name || mn.teacher}</strong>
+                <button onClick={() => { void signOut(); }}>
                   {mn.logout}
                 </button>
               </div>

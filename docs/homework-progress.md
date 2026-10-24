@@ -1,27 +1,9 @@
-# Homework Library implementation
+# Homework Library
 
-The requested product is added in `web/` and `extension/` alongside the erxes scaffold. It uses separate Supabase authentication and data. No existing database is reset.
+This workspace adds a Mongolian teacher exercise library and Chrome extension alongside the erxes scaffold. The web app persists accounts and lesson sets in local MongoDB and keeps private PDF uploads on disk. It does not require Supabase or a hosted database project.
 
-## Phase 1
+For local startup, see the root README: install dependencies, start local MongoDB, copy `web/.env.mongodb.example` to `web/.env.local`, set a private `AUTH_SECRET`, then start the web app. Optional demo data can be created with `pnpm seed`.
 
-Next.js, TypeScript, Tailwind, a typed Supabase client, Mongolian strings, and the SQL migration are scaffolded. Run `pnpm dev` for the web app on port 3000. Copy `web/.env.example` to `web/.env.local` and apply the SQL migration to a Supabase project. Authentication and the library arrive in the next phases. No credentials are supplied or invented.
+Teacher passwords are hashed with scrypt. API bearer tokens are signed by the server and expire after seven days. Lesson pair saves are atomic as one MongoDB document. Upload records bind local PDF paths to their owner, and upload files are stored outside git. The extension keeps only the user session token in Chrome storage and talks to the web API.
 
-## Phase 2
-
-Added email/password login, registration with teacher details, a protected personal collection, and authenticated bearer-token API routes. Supabase verifies tokens on the server; the UI guard is only a convenience. Run `pnpm dev`, register at `/register`, and visit `/my-sets`. Accounts and persistence are real Supabase operations; missing Supabase configuration produces setup guidance. No auth bypass or mock accounts are enabled.
-
-## Phase 3
-
-Added `/generate`, private PDF uploads, direct Claude document inputs, `mn-MN` speech recognition with editable textarea fallback, two-set editing, and atomic private/public saves. Run `pnpm dev` and open `/generate` after signing in. `claude-sonnet-5-5` is isolated in `web/src/lib/ai/generate.ts`; malformed JSON gets one retry. Without the Anthropic key, the UI explicitly labels the fixed Mongolian fractions fixture as a mock. Supabase and browser speech recognition are not mocked.
-
-## Phase 4
-
-Added the searchable public library, filters and sorting, set details, owner editing and publication controls, atomic copying, ratings, answer-key toggles, text export, and student/teacher print views. Run `pnpm dev` and visit `/library`. Run `pnpm seed` only after configuring the service-role key and your demo password to create four demo teachers and twenty public sets. Seed data is fictional instructional content; ratings/copy counts are real and are not artificially inflated. Live Supabase verification still requires project credentials.
-
-## Phase 5
-
-Added the Manifest V3 React/Vite side panel, persistent Supabase sessions in Chrome storage, three tabs, text selection capture, library copying, and web links. Run `pnpm --filter homework_extension build` and load `extension/dist` unpacked in Chrome. Run the web server with `pnpm dev`. The extension shares the existing UI and calls the web API; it contains no server credentials or independent business logic. The same clearly labelled AI mock applies when the server has no Anthropic key.
-
-## Phase 6
-
-Added Mongolian route error/loading/404 states, responsive layouts, accessible form controls, protected PDF validation, and strict database checks for question data. Isolated React 18 type resolution for the erxes scaffold. Validated the implementation with fourteen unit/database tests, five browser workflow tests, an actual Chrome extension startup test, and repository-wide type checking, lint, and production builds. Desktop and mobile screenshots were inspected. The extension service worker and side panel loaded successfully in a fresh Chrome profile. Browser workflow tests use clearly isolated fixtures; live Supabase, Anthropic, email delivery, and microphone transcription require the team's own configuration. No live database was modified. Run commands and configuration instructions are in the README.
+Live Anthropic generation requires the team's own `ANTHROPIC_API_KEY`. The README documents local API and MongoDB deployment considerations.

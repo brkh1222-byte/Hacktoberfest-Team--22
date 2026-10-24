@@ -134,7 +134,7 @@ export function Generator({
     setSaving(true);
     setError("");
     try {
-      setSaved(await api.saveGeneration(parsed.data));
+      setSaved(await api.saveGeneration({ ...parsed.data, saveId: crypto.randomUUID() }));
     } catch (failure) {
       setError(errorMessage(failure));
     } finally {

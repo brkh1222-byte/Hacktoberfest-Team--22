@@ -1,7 +1,8 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { mn } from "@/lib/i18n/mn";
-import { profileSchema } from "@/lib/schema";
+import { registrationSchema, loginSchema } from "@/lib/schema";
+import { errorMessage } from "@/lib/client";
 import { SetupMessage, useAuth } from "./AuthProvider";
 
 export function AuthForm({
@@ -13,16 +14,15 @@ export function AuthForm({
   onSuccess?: () => void;
   webBase?: string;
 }) {
-  const { client, session } = useAuth();
+  const { ready, session, login, register: createAccount } = useAuth();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [subjects, setSubjects] = useState<string[]>([]);
   const [grades, setGrades] = useState<number[]>([]);
-  if (!client) return <SetupMessage />;
+  if (!ready) return <SetupMessage />;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!client) return;
     setError("");
     setMessage("");
     setBusy(true);
@@ -31,7 +31,8 @@ export function AuthForm({
     const password = String(fields.get("password") ?? "");
     try {
       if (register) {
-        const parsed = profileSchema.safeParse({
+        const parsed = registrationSchema.safeParse({
+          email, password,
           full_name: fields.get("full_name"),
           school: fields.get("school"),
           aimag_or_district: fields.get("aimag_or_district"),
@@ -42,30 +43,19 @@ export function AuthForm({
           setError(mn.invalidInput);
           return;
         }
-        const { data, error: failure } = await client.auth.signUp({
-          email,
-          password,
-          options: { data: parsed.data },
-        });
-        if (failure) {
-          setError(mn.signupError);
-          return;
-        }
-        if (!data.session) {
-          setMessage(mn.confirmEmail);
-          return;
-        }
+        await createAccount(parsed.data);
       } else {
-        const { error: failure } = await client.auth.signInWithPassword({ email, password });
-        if (failure) {
+        const parsed = loginSchema.safeParse({ email, password });
+        if (!parsed.success) { setError(mn.invalidInput); return; }
+        try { await login(parsed.data); } catch {
           setError(mn.authError);
           return;
         }
       }
       if (onSuccess) onSuccess();
       else window.location.assign("/my-sets");
-    } catch {
-      setError(mn.networkError);
+    } catch (failure) {
+      setError(errorMessage(failure));
     } finally {
       setBusy(false);
     }
@@ -182,7 +172,7 @@ export function AuthForm({
               name="password"
               type="password"
               autoComplete={register ? "new-password" : "current-password"}
-              minLength={8}
+              minLength={12}
               maxLength={128}
               required
             />

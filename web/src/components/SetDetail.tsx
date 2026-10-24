@@ -93,7 +93,7 @@ export function SetDetail({
         </button>
       </div>
     );
-  const owner = session?.user.id === set.owner_id;
+  const owner = session?.teacher.id === set.owner_id;
   return (
     <div className={printOnly ? "print-preview" : "detail-page"}>
       <div className="no-print">
