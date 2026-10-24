@@ -1,0 +1,9 @@
+{
+  "name": "homework_extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "vite build --watch", "build": "vite build", "check": "tsc --noEmit" },
+  "dependencies": { "@supabase/supabase-js": "2.118.0", "react": "19.3.1", "react-dom": "19.3.1", "zod": "^4.6.5" },
+  "devDependencies": { "@tailwindcss/postcss": "^4.3.3", "@types/chrome": "^0.1.0", "@types/node": "^22.20.4", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "tailwindcss": "^4.3.3", "typescript": "^5.9.3", "vite": "^7.3.0" }
+}

@@ -4,7 +4,7 @@ import { mn } from "@/lib/i18n/mn";
 import { profileSchema } from "@/lib/schema";
 import { SetupMessage, useAuth } from "./AuthProvider";
 
-export function AuthForm({ register = false, onSuccess }: { register?: boolean; onSuccess?: () => void }) {
+export function AuthForm({ register = false, onSuccess, webBase = "" }: { register?: boolean; onSuccess?: () => void; webBase?: string }) {
   const { client, session } = useAuth();
   const [error, setError] = useState(""); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
   const [subjects, setSubjects] = useState<string[]>([]); const [grades, setGrades] = useState<number[]>([]);
@@ -33,6 +33,6 @@ export function AuthForm({ register = false, onSuccess }: { register?: boolean; 
     {register && <><label>{mn.fullName}<input name="full_name" autoComplete="name" required minLength={2} maxLength={100} /></label><div className="form-grid"><label>{mn.school}<input name="school" required minLength={2} maxLength={150} /></label><label>{mn.district}<input name="aimag_or_district" required minLength={2} maxLength={100} /></label></div><fieldset><legend>{mn.subjectsLabel}</legend><div className="chips">{mn.subjects.map(subject => <label className="check-chip" key={subject}><input type="checkbox" checked={subjects.includes(subject)} onChange={event => setSubjects(event.target.checked ? [...subjects, subject] : subjects.filter(item => item !== subject))} />{subject}</label>)}</div></fieldset><fieldset><legend>{mn.gradesLabel}</legend><div className="chips">{Array.from({ length: 12 }, (_, i) => i + 1).map(grade => <label className="check-chip" key={grade}><input type="checkbox" checked={grades.includes(grade)} onChange={event => setGrades(event.target.checked ? [...grades, grade] : grades.filter(item => item !== grade))} />{grade}</label>)}</div></fieldset></>}
     <label>{mn.email}<input name="email" type="email" autoComplete="email" required maxLength={254} /></label><label>{mn.password}<input name="password" type="password" autoComplete={register ? "new-password" : "current-password"} minLength={8} maxLength={128} required />{register && <small>{mn.passwordHint}</small>}</label>
     {error && <div className="notice error" role="alert">{error}</div>}{message && <div className="notice" role="status">{message}</div>}<button disabled={busy} className="button primary">{busy ? mn.loading : register ? mn.register : mn.login}</button>
-    <p className="auth-switch">{register ? mn.hasAccount : mn.noAccount} <a href={register ? "/login" : "/register"}>{register ? mn.login : mn.register}</a></p>
+    <p className="auth-switch">{register ? mn.hasAccount : mn.noAccount} <a href={`${webBase}${register ? "/login" : "/register"}`} target={webBase ? "_blank" : undefined} rel={webBase ? "noreferrer" : undefined}>{register ? mn.login : mn.register}</a></p>
   </form></section></div>;
 }

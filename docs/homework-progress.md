@@ -17,3 +17,7 @@ Added `/generate`, private PDF uploads, direct Claude document inputs, `mn-MN` s
 ## Phase 4
 
 Added the searchable public library, filters and sorting, set details, owner editing and publication controls, atomic copying, ratings, answer-key toggles, text export, and student/teacher print views. Run `pnpm dev` and visit `/library`. Run `pnpm seed` only after configuring the service-role key and your demo password to create four demo teachers and twenty public sets. Seed data is fictional instructional content; ratings/copy counts are real and are not artificially inflated. Live Supabase verification still requires project credentials.
+
+## Phase 5
+
+Added the Manifest V3 React/Vite side panel, persistent Supabase sessions in Chrome storage, three tabs, text selection capture, library copying, and web links. Run `pnpm --filter homework_extension build` and load `extension/dist` unpacked in Chrome. Run the web server with `pnpm dev`. The extension shares the existing UI and calls the web API; it contains no server credentials or independent business logic. The same clearly labelled AI mock applies when the server has no Anthropic key.

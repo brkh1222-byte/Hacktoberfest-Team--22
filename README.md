@@ -26,6 +26,16 @@ Database calls live in `web/src/lib/db/`; AI calls are behind `generateExerciseS
 
 Student exports omit answer keys; teacher exports include them. Open a set's student/teacher print view and use the browser's print-to-PDF destination. Speech recognition availability and `mn-MN` accuracy depend on the browser; text entry always works.
 
+### Chrome side panel
+
+1. Configure `web/.env.local`. `WEB_APP_URL` defaults to `http://localhost:3000`; use an HTTPS origin for deployment. The extension build copies only the public Supabase URL and anonymous key, never the Anthropic or service-role keys.
+2. Run `pnpm --filter homework_extension build` (or `pnpm dev:extension` to watch source changes).
+3. Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select `extension/dist`.
+4. Click the extension toolbar icon and sign in with the same account used on the web. Sessions are stored in `chrome.storage.local` with access limited to trusted extension contexts.
+5. Highlight text on a regular web page, click the toolbar icon to grant temporary active-tab access, and choose **Сонгосон бичвэрийг ашиглах**. If you change to another origin, invoke the toolbar icon again. Chrome internal pages and the Web Store do not allow script injection; the editable text field remains available.
+
+The side panel supports text/voice/PDF generation, editing and saving pairs, public library search and copying, and personal sets. Every set links back to the web app. Rebuild and reload the extension after changing its configuration. It uses only the web API for business operations; another plugin shell can reuse the same endpoints.
+
 ## Original erxes scaffold
 
 Lesson plugin for erxes
