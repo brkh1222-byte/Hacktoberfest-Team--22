@@ -1,6 +1,7 @@
 import type { ApolloError } from "@apollo/client";
-import { IconAlertTriangle, IconLock } from "@tabler/icons-react";
-import { Button, Empty, Spinner } from "erxes-ui";
+import { IconAlertCircle, IconDatabaseOff, IconLock, type Icon } from "@tabler/icons-react";
+import { Button, Empty, Spinner, cn } from "erxes-ui";
+import type { ReactNode } from "react";
 import { mn } from "~/lib/mn";
 
 export const errorCode = (error: ApolloError | undefined) =>
@@ -18,28 +19,61 @@ export const errorText = (error: ApolloError | Error) => {
   return error.message || mn.error;
 };
 
-export const Loading = () => (
-  <div role="status" aria-label={mn.loading} className="homework:flex homework:justify-center homework:py-16">
-    <Spinner />
-  </div>
-);
+export const Loading = () => <Spinner containerClassName="homework:py-20" />;
 
-export const ErrorState = ({ error, onRetry }: { error: ApolloError; onRetry?: () => void }) => {
+// Same two modes erxes list pages use: an overlay on a mounted RecordTable (the
+// header stays usable) or a standalone panel.
+export const EmptyState = ({
+  icon: StateIcon = IconDatabaseOff,
+  title,
+  description,
+  action,
+  error,
+  onRetry,
+  overlay,
+}: {
+  icon?: Icon;
+  title?: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
+  error?: ApolloError;
+  onRetry?: () => void;
+  overlay?: boolean;
+}) => {
   const forbidden = errorCode(error) === "FORBIDDEN";
+  const ShownIcon = forbidden ? IconLock : error ? IconAlertCircle : StateIcon;
 
   return (
-    <Empty role="alert">
+    <Empty
+      role={error ? "alert" : undefined}
+      className={cn(
+        overlay
+          ? "homework:pointer-events-none homework:absolute homework:inset-0 homework:z-10 homework:pt-16 homework:**:data-[slot=empty-content]:pointer-events-auto"
+          : "homework:m-3 homework:rounded-lg homework:bg-sidebar",
+      )}
+    >
       <Empty.Header>
-        <Empty.Media variant="icon">{forbidden ? <IconLock /> : <IconAlertTriangle />}</Empty.Media>
-        <Empty.Title>{errorText(error)}</Empty.Title>
-        {forbidden && <Empty.Description>{mn.permissionHint}</Empty.Description>}
+        <Empty.Media
+          variant="icon"
+          className={cn("homework:size-14 homework:rounded-xl homework:[&>svg]:size-8", error && "homework:text-destructive")}
+        >
+          <ShownIcon />
+        </Empty.Media>
+        <Empty.Title>{error ? errorText(error) : (title ?? mn.emptyTitle)}</Empty.Title>
+        {error ? (
+          forbidden && <Empty.Description>{mn.permissionHint}</Empty.Description>
+        ) : (
+          description && <Empty.Description>{description}</Empty.Description>
+        )}
       </Empty.Header>
-      {onRetry && !forbidden && (
+      {error && onRetry && !forbidden ? (
         <Empty.Content>
           <Button variant="outline" onClick={onRetry}>
             {mn.retry}
           </Button>
         </Empty.Content>
+      ) : (
+        !error && action && <Empty.Content>{action}</Empty.Content>
       )}
     </Empty>
   );

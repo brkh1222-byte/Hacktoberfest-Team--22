@@ -18,7 +18,7 @@ export const CONFIG: IUIConfig = {
   navigationGroup: {
     name: manifest.title,
     icon: IconBooks,
-    defaultPath: path,
+    defaultPath: `${path}/library`,
   },
   modules: [{ name, icon: IconBooks, path }],
 };
