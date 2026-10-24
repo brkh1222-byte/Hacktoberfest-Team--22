@@ -5,7 +5,7 @@ import type { IUserDocument } from "erxes-api-shared/core-types";
 import mongoose from "mongoose";
 import { generateModels, type Context, type IModels } from "../../connectionResolvers.ts";
 import { GENERATE, SETS_MANAGE, SETS_READ } from "../../permissions.ts";
-import { generateExerciseSets, generateValidated } from "./ai/generate.ts";
+import { generateExerciseSets, generateValidated, geminiCompletion } from "./ai/generate.ts";
 import { mockExerciseSets } from "./ai/mock.ts";
 import { isPdf, MAX_PDF_BYTES } from "./db/models/Uploads.ts";
 import { homeworkResolvers } from "./graphql/resolvers.ts";
@@ -106,6 +106,35 @@ describe("generation", () => {
     let calls = 0;
     await assert.rejects(generateValidated(input, async () => (calls++, reply)));
     assert.equal(calls, 2);
+  });
+
+  test("the Gemini completion sends the PDF and prompt and reads the text parts", async () => {
+    let sent: { url: string; init: RequestInit } | undefined;
+    const request = (async (url: string, init: RequestInit) => {
+      sent = { url, init };
+      return new Response(
+        JSON.stringify({
+          candidates: [{ finishReason: "STOP", content: { parts: [{ text: "thinking", thought: true }, { text: '{"a":' }, { text: "1}" }] } }],
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+
+    const reply = await geminiCompletion("test-key", Buffer.from("%PDF-1.7"), request)("make exercises");
+    assert.equal(reply, '{"a":1}');
+    assert.ok(sent);
+    assert.match(sent.url, /models\/gemini-3.8-flash:generateContent$/);
+    assert.equal((sent.init.headers as Record<string, string>)["x-goog-api-key"], "test-key");
+    const body = JSON.parse(String(sent.init.body)) as { contents: { parts: Record<string, unknown>[] }[] };
+    assert.deepEqual(Object.keys(body.contents[0]?.parts[0] ?? {}), ["inline_data"]);
+    assert.deepEqual(body.contents[0]?.parts[1], { text: "make exercises" });
+  });
+
+  test("Gemini errors and truncated replies are rejected", async () => {
+    const reply = (status: number, payload: unknown) =>
+      (async () => new Response(JSON.stringify(payload), { status })) as unknown as typeof fetch;
+    await assert.rejects(geminiCompletion("k", undefined, reply(403, { error: { status: "PERMISSION_DENIED" } }))("x"), /Gemini 403/);
+    await assert.rejects(geminiCompletion("k", undefined, reply(200, { candidates: [{ finishReason: "MAX_TOKENS" }] }))("x"), /truncated/);
   });
 
   test("invalid answers, duplicate ids and unbounded inputs are rejected", () => {

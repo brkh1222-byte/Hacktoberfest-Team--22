@@ -16,8 +16,9 @@ may do what.
 - erxes 3.3.2 or later (the plugin targets the 3.3.x shared-library baseline)
 - The same Redis and MongoDB your erxes gateway and core-api use
 - A static host or CDN for the UI files, reachable from your users' browsers
-- Optional: an Anthropic API key for live generation. Without one, the plugin
-  works end to end and generation returns a clearly labelled sample.
+- Optional: an Anthropic or Google Gemini API key for live generation. Without
+  one, the plugin works end to end and generation returns a clearly labelled
+  sample.
 
 ## What is in the release
 
@@ -61,8 +62,11 @@ Copy `.env.example` to `.env` and set:
 | `MONGO_URL` | yes | The MongoDB erxes uses |
 | `UI_ENTRY_URL` | yes | Browser URL of `remoteEntry.js` from step 1 |
 | `LOAD_BALANCER_ADDRESS` | no | How the gateway reaches the API; defaults to `http://plugin-homework-api:80` |
-| `ANTHROPIC_API_KEY` | no | Enables live generation |
-| `HOMEWORK_AI_MODEL` | no | Model id, default `claude-sonnet-5-5` |
+| `ANTHROPIC_API_KEY` | no | Enables live generation with Claude |
+| `HOMEWORK_AI_MODEL` | no | Claude model id, default `claude-sonnet-5-5` |
+| `GEMINI_API_KEY` | no | Enables live generation with Gemini |
+| `GEMINI_MODEL` | no | Gemini model id, default `gemini-3.8-flash` |
+| `HOMEWORK_AI_PROVIDER` | no | `anthropic` or `gemini`; only needed when both keys are set (otherwise Anthropic is used) |
 | `VERSION` | no | `saas` on multi-tenant erxes |
 
 The container listens on port 80 and answers `GET /health`. **Keep that port
@@ -108,7 +112,7 @@ All data is stored in the organization's erxes database:
 | `homework_uploads` | Lesson PDFs while they are being used; deleted automatically after 24 hours |
 
 Back them up with the rest of your erxes database. Lesson text and PDFs are
-sent to Anthropic only when `ANTHROPIC_API_KEY` is set.
+sent to the AI provider (Anthropic or Google) only when its key is set.
 
 ## Local demo
 

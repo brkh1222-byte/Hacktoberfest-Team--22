@@ -36,10 +36,18 @@ const envSchema = z.object({
   UI_ENTRY_URL: optional,
   LOAD_BALANCER_ADDRESS: optional,
   RELEASE_VERSION: optional,
-  // Unset = generation returns a fixed sample (clearly flagged in the UI), so
-  // the plugin installs and demos without an Anthropic account.
+  // With no key at all, generation returns a fixed sample (clearly flagged in
+  // the UI), so the plugin installs and demos without an AI account.
+  // HOMEWORK_AI_PROVIDER picks one when both keys are set; otherwise the
+  // provider whose key is present is used (Anthropic first).
+  HOMEWORK_AI_PROVIDER: z
+    .enum(["anthropic", "gemini"])
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   ANTHROPIC_API_KEY: optional,
   HOMEWORK_AI_MODEL: z.string().default("claude-sonnet-5-5"),
+  GEMINI_API_KEY: optional,
+  GEMINI_MODEL: z.string().default("gemini-3.8-flash"),
 });
 
 export const env = envSchema.parse(process.env);
