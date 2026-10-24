@@ -9,3 +9,7 @@ Next.js, TypeScript, Tailwind, a typed Supabase client, Mongolian strings, and t
 ## Phase 2
 
 Added email/password login, registration with teacher details, a protected personal collection, and authenticated bearer-token API routes. Supabase verifies tokens on the server; the UI guard is only a convenience. Run `pnpm dev`, register at `/register`, and visit `/my-sets`. Accounts and persistence are real Supabase operations; missing Supabase configuration produces setup guidance. No auth bypass or mock accounts are enabled.
+
+## Phase 3
+
+Added `/generate`, private PDF uploads, direct Claude document inputs, `mn-MN` speech recognition with editable textarea fallback, two-set editing, and atomic private/public saves. Run `pnpm dev` and open `/generate` after signing in. `claude-sonnet-5-5` is isolated in `web/src/lib/ai/generate.ts`; malformed JSON gets one retry. Without the Anthropic key, the UI explicitly labels the fixed Mongolian fractions fixture as a mock. Supabase and browser speech recognition are not mocked.
