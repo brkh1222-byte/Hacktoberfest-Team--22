@@ -1,9 +1,8 @@
 import type { IUserDocument } from "erxes-api-shared/core-types";
 import { z } from "zod";
-import { env } from "../../../config.ts";
 import type { Context } from "../../../connectionResolvers.ts";
 import { GENERATE, SETS_MANAGE, SETS_READ } from "../../../permissions.ts";
-import { aiEnabled, generateExerciseSets } from "../ai/generate.ts";
+import { aiEnabled, aiModel, generateExerciseSets } from "../ai/generate.ts";
 import type { IExerciseSet, IProfile } from "../db/definitions/homework.ts";
 import { MAX_PDF_BYTES } from "../db/models/Uploads.ts";
 import { fail, parseInput } from "../errors.ts";
@@ -103,7 +102,7 @@ export const homeworkResolvers = {
       await authorize(context, SETS_READ);
       return {
         aiEnabled: aiEnabled(),
-        model: aiEnabled() ? env.HOMEWORK_AI_MODEL : null,
+        model: aiModel(),
         maxPdfBytes: MAX_PDF_BYTES,
       };
     },

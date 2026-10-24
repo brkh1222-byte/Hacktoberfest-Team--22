@@ -36,7 +36,7 @@ pnpm run dev:ui          # serves http://localhost:3099/remoteEntry.js
 
 In the erxes checkout's `.env`, set `ENABLED_PLUGINS=...,homework`, restart
 the gateway and core-api, and open `http://localhost:3001/homework`. Without
-`ANTHROPIC_API_KEY`, generation returns a labelled sample, so the whole flow
+`ANTHROPIC_API_KEY` or `GEMINI_API_KEY`, generation returns a labelled sample, so the whole flow
 can be demoed offline.
 
 | Script | What it does |
