@@ -8,15 +8,22 @@ begin
   if jsonb_typeof(value) <> 'array' or jsonb_array_length(value) not between 1 and 20 then return false; end if;
   if (select count(distinct item->>'id') from jsonb_array_elements(value) item) <> jsonb_array_length(value) then return false; end if;
   for q in select * from jsonb_array_elements(value) loop
+    if jsonb_typeof(q) <> 'object' then return false; end if;
     if not (q ?& array['id','type','prompt','answer','explanation','points']) then return false; end if;
+    if jsonb_typeof(q->'id') is distinct from 'string' or jsonb_typeof(q->'type') is distinct from 'string'
+      or jsonb_typeof(q->'prompt') is distinct from 'string' or jsonb_typeof(q->'answer') is distinct from 'string'
+      or jsonb_typeof(q->'explanation') is distinct from 'string' then return false; end if;
     if q->>'type' not in ('multiple_choice','short_answer','calculation','true_false','fill_blank') then return false; end if;
     if length(trim(q->>'id')) not between 1 and 100 or length(trim(q->>'prompt')) not between 1 and 4000
       or length(trim(q->>'answer')) not between 1 and 4000 or length(trim(q->>'explanation')) not between 1 and 4000 then return false; end if;
-    if jsonb_typeof(q->'points') <> 'number' or (q->>'points')::numeric <> trunc((q->>'points')::numeric)
+    if jsonb_typeof(q->'points') is distinct from 'number' or (q->>'points')::numeric <> trunc((q->>'points')::numeric)
       or (q->>'points')::numeric not between 1 and 20 then return false; end if;
-    if q->>'type' = 'multiple_choice' then
+    if q->>'type' = 'multiple_choice' or q ? 'options' then
       if jsonb_typeof(q->'options') is distinct from 'array' then return false; end if;
-      if jsonb_array_length(q->'options') not between 2 and 6 or not (q->'options' ? (q->>'answer')) then return false; end if;
+      if jsonb_array_length(q->'options') not between 2 and 6 then return false; end if;
+      if q->>'type' = 'multiple_choice' and not (q->'options' ? (q->>'answer')) then return false; end if;
+      if exists (select 1 from jsonb_array_elements(q->'options') choice where jsonb_typeof(choice) <> 'string' or length(trim(choice #>> '{}')) not between 1 and 1000) then return false; end if;
+      if (select count(distinct choice) from jsonb_array_elements(q->'options') choice) <> jsonb_array_length(q->'options') then return false; end if;
     end if;
   end loop;
   return true;

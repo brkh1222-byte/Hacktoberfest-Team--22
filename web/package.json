@@ -9,6 +9,8 @@
     "start": "next start --hostname 0.0.0.0",
     "check": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
+    "test:browser": "playwright test",
+    "test:extension": "tsx scripts/smoke-extension.ts",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts"
   },
   "dependencies": {
@@ -20,6 +22,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.11",
+    "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.20.4",
     "@types/react": "^19.0.0",

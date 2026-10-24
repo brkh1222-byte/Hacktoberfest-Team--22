@@ -21,3 +21,7 @@ Added the searchable public library, filters and sorting, set details, owner edi
 ## Phase 5
 
 Added the Manifest V3 React/Vite side panel, persistent Supabase sessions in Chrome storage, three tabs, text selection capture, library copying, and web links. Run `pnpm --filter homework_extension build` and load `extension/dist` unpacked in Chrome. Run the web server with `pnpm dev`. The extension shares the existing UI and calls the web API; it contains no server credentials or independent business logic. The same clearly labelled AI mock applies when the server has no Anthropic key.
+
+## Phase 6
+
+Added Mongolian route error/loading/404 states, responsive layouts, accessible form controls, protected PDF validation, and strict database checks for question data. Isolated React 18 type resolution for the erxes scaffold. Validated the implementation with fourteen unit/database tests, five browser workflow tests, an actual Chrome extension startup test, and repository-wide type checking, lint, and production builds. Desktop and mobile screenshots were inspected. The extension service worker and side panel loaded successfully in a fresh Chrome profile. Browser workflow tests use clearly isolated fixtures; live Supabase, Anthropic, email delivery, and microphone transcription require the team's own configuration. No live database was modified. Run commands and configuration instructions are in the README.

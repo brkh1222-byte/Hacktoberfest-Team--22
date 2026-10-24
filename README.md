@@ -36,6 +36,16 @@ Student exports omit answer keys; teacher exports include them. Open a set's stu
 
 The side panel supports text/voice/PDF generation, editing and saving pairs, public library search and copying, and personal sets. Every set links back to the web app. Rebuild and reload the extension after changing its configuration. It uses only the web API for business operations; another plugin shell can reuse the same endpoints.
 
+### Verification
+
+`pnpm test` runs generation/validation/export tests and executes the actual SQL migration in a local PostgreSQL runtime (PGlite) with minimal Supabase platform schemas. It verifies anonymous denial, public/private access, owner-only changes, protected copy counters, atomic copies and pair saves, ratings, and isolated PDF storage.
+
+`pnpm --filter homework_web exec playwright install chromium` installs the browser for `pnpm --filter homework_web test:browser`. If a system Chrome is already installed, use `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/google-chrome pnpm --filter homework_web test:browser`. These browser tests use explicitly fake auth/API fixtures for signed-in UI flows and real HTTP requests to verify unauthenticated API rejection; they do not contact a live Supabase or Anthropic account. They cover registration, editing and saving generated pairs, library empty states, desktop/mobile layout, copying, rating, and student/teacher exports.
+
+After building the extension, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/google-chrome pnpm --filter homework_web test:extension` loads it in a fresh Chrome profile and checks the service worker, side panel, and narrow layout. Live speech quality, email delivery, and Claude generation require the team's configured services and a microphone.
+
+The erxes UI remains on React 18 and its host-provided singletons; its TypeScript paths explicitly resolve React 18 types to keep it separate from the standalone React 19 app.
+
 ## Original erxes scaffold
 
 Lesson plugin for erxes
@@ -45,11 +55,11 @@ The shared-library baseline is erxes 3.3.2. Dashed plugin names
 use the same public permission identity in the API and UI; the host must support
 normalized remote discovery and dashed page-module loading (see integration docs).
 
-| Part   | Path         | Stack                                                    | Dev port    |
-| ------ | ------------ | -------------------------------------------------------- | ----------- |
-| API    | `api`        | Node.js 22, erxes-api-shared startPlugin + tenant-scoped Mongoose models (Node.js)                             | 3399 |
-| UI     | `ui`         | React 18 Module Federation remote (Rspack), Tailwind CSS | 3099  |
-| Shared | `erxes.json` | Plugin identity and ports read by both parts             |             |
+| Part   | Path         | Stack                                                                              | Dev port |
+| ------ | ------------ | ---------------------------------------------------------------------------------- | -------- |
+| API    | `api`        | Node.js 22, erxes-api-shared startPlugin + tenant-scoped Mongoose models (Node.js) | 3399     |
+| UI     | `ui`         | React 18 Module Federation remote (Rspack), Tailwind CSS                           | 3099     |
+| Shared | `erxes.json` | Plugin identity and ports read by both parts                                       |          |
 
 The UI uses erxes's `erxes-ui`/`ui-modules` design system, installed from npm
 (`@erxes/ui`, `@erxes/ui-modules`; see
@@ -85,8 +95,8 @@ a private gateway-only network and strip user/tenant headers at public ingress.
 
 ## Scripts
 
-| Script              | What it does                                    |
-| ------------------- | ----------------------------------------------- |
+| Script             | What it does                                    |
+| ------------------ | ----------------------------------------------- |
 | `pnpm run dev:api` | API in watch mode                               |
 | `pnpm run dev:ui`  | UI remote dev server                            |
 | `pnpm run codegen` | Print the API schema, generate UI GraphQL types |

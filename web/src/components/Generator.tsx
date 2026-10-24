@@ -345,10 +345,20 @@ export function Generator({
             <div className="notice" role="status">
               <strong>{mn.saved}</strong>
               <div className="actions">
-                <a className="button secondary" href={`${webBase}/sets/${saved.in_class_set_id}`}>
+                <a
+                  className="button secondary"
+                  href={`${webBase}/sets/${saved.in_class_set_id}`}
+                  target={webBase ? "_blank" : undefined}
+                  rel={webBase ? "noreferrer" : undefined}
+                >
                   {mn.setTypeLabels.in_class} ↗
                 </a>
-                <a className="button secondary" href={`${webBase}/sets/${saved.homework_set_id}`}>
+                <a
+                  className="button secondary"
+                  href={`${webBase}/sets/${saved.homework_set_id}`}
+                  target={webBase ? "_blank" : undefined}
+                  rel={webBase ? "noreferrer" : undefined}
+                >
                   {mn.setTypeLabels.homework} ↗
                 </a>
               </div>

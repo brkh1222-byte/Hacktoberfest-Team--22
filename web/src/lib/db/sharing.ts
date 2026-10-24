@@ -14,9 +14,15 @@ export async function rateSet(context: TeacherContext, id: string, input: unknow
   const { stars } = z.object({ stars: z.number().int().min(1).max(5) }).parse(input);
   const set = await getSet(context, id);
   if (set.visibility !== "public") throw new ApiError(403, mn.forbidden);
-  const { error } = await context.db.from("ratings").insert({ set_id: id, teacher_id: context.userId, stars });
+  const { error } = await context.db
+    .from("ratings")
+    .insert({ set_id: id, teacher_id: context.userId, stars });
   if (error?.code === "23505") {
-    const { error: updateError } = await context.db.from("ratings").update({ stars }).eq("set_id", id).eq("teacher_id", context.userId);
+    const { error: updateError } = await context.db
+      .from("ratings")
+      .update({ stars })
+      .eq("set_id", id)
+      .eq("teacher_id", context.userId);
     if (updateError) throw new ApiError(500, mn.databaseError);
   } else if (error) throw new ApiError(500, mn.databaseError);
   return { success: true };

@@ -2,8 +2,154 @@
 import type { Question } from "@/lib/schema";
 import { mn } from "@/lib/i18n/mn";
 
-export function QuestionEditor({ questions, onChange, title, disabled = false }: { questions: Question[]; onChange: (questions: Question[]) => void; title: string; disabled?: boolean }) {
-  function update(index: number, patch: Partial<Question>) { onChange(questions.map((question, i) => i === index ? { ...question, ...patch } : question)); }
-  function move(index: number, offset: number) { const next = [...questions]; [next[index], next[index + offset]] = [next[index + offset], next[index]]; onChange(next); }
-  return <fieldset disabled={disabled} className="question-editor"><legend>{title} <span className="count-pill">{questions.length}</span></legend>{questions.map((question, index) => <section key={question.id} className="editable-question"><div className="question-toolbar"><span className="question-number">{String(index + 1).padStart(2, "0")}</span><div><button type="button" className="icon-button" disabled={index === 0} onClick={() => move(index, -1)} aria-label={`${mn.moveUp}: ${index + 1}`}>↑</button><button type="button" className="icon-button" disabled={index === questions.length - 1} onClick={() => move(index, 1)} aria-label={`${mn.moveDown}: ${index + 1}`}>↓</button><button type="button" className="icon-button danger-text" disabled={questions.length === 1} onClick={() => onChange(questions.filter((_, i) => i !== index))} aria-label={`${mn.deleteQuestion}: ${index + 1}`}>×</button></div></div><div className="form-grid"><label>{mn.questionType}<select value={question.type} onChange={event => update(index, { type: event.target.value as Question["type"], options: event.target.value === "multiple_choice" ? question.options ?? ["", ""] : undefined })}>{Object.entries(mn.questionTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>{mn.points}<input type="number" min={1} max={20} value={question.points} onChange={event => update(index, { points: Number(event.target.value) })} /></label></div><label>{mn.question}<textarea value={question.prompt} maxLength={4000} onChange={event => update(index, { prompt: event.target.value })} /></label>{question.type === "multiple_choice" && <label>{mn.options}<textarea value={question.options?.join("\n") ?? ""} onChange={event => update(index, { options: event.target.value.split("\n") })} /></label>}<label>{mn.answer}<textarea className="compact-textarea" value={question.answer} maxLength={4000} onChange={event => update(index, { answer: event.target.value })} /></label><label>{mn.explanation}<textarea className="compact-textarea" value={question.explanation} maxLength={4000} onChange={event => update(index, { explanation: event.target.value })} /></label></section>)}<button type="button" className="button secondary add-question" disabled={questions.length >= 20} onClick={() => onChange([...questions, { id: crypto.randomUUID(), type: "short_answer", prompt: "", answer: "", explanation: "", points: 1 }])}>＋ {mn.addQuestion}</button></fieldset>;
+export function QuestionEditor({
+  questions,
+  onChange,
+  title,
+  disabled = false,
+}: {
+  questions: Question[];
+  onChange: (questions: Question[]) => void;
+  title: string;
+  disabled?: boolean;
+}) {
+  function update(index: number, patch: Partial<Question>) {
+    onChange(questions.map((question, i) => (i === index ? { ...question, ...patch } : question)));
+  }
+  function move(index: number, offset: number) {
+    const next = [...questions];
+    [next[index], next[index + offset]] = [next[index + offset], next[index]];
+    onChange(next);
+  }
+  return (
+    <fieldset disabled={disabled} className="question-editor">
+      <legend>
+        {title} <span className="count-pill">{questions.length}</span>
+      </legend>
+      {questions.map((question, index) => (
+        <section key={question.id} className="editable-question">
+          <div className="question-toolbar">
+            <span className="question-number">{String(index + 1).padStart(2, "0")}</span>
+            <div>
+              <button
+                type="button"
+                className="icon-button"
+                disabled={index === 0}
+                onClick={() => move(index, -1)}
+                aria-label={`${mn.moveUp}: ${index + 1}`}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                className="icon-button"
+                disabled={index === questions.length - 1}
+                onClick={() => move(index, 1)}
+                aria-label={`${mn.moveDown}: ${index + 1}`}
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                className="icon-button danger-text"
+                disabled={questions.length === 1}
+                onClick={() => onChange(questions.filter((_, i) => i !== index))}
+                aria-label={`${mn.deleteQuestion}: ${index + 1}`}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <div className="form-grid">
+            <label>
+              {mn.questionType}
+              <select
+                value={question.type}
+                onChange={(event) =>
+                  update(index, {
+                    type: event.target.value as Question["type"],
+                    options:
+                      event.target.value === "multiple_choice"
+                        ? (question.options ?? ["", ""])
+                        : undefined,
+                  })
+                }
+              >
+                {Object.entries(mn.questionTypeLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {mn.points}
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={question.points}
+                onChange={(event) => update(index, { points: Number(event.target.value) })}
+              />
+            </label>
+          </div>
+          <label>
+            {mn.question}
+            <textarea
+              value={question.prompt}
+              maxLength={4000}
+              onChange={(event) => update(index, { prompt: event.target.value })}
+            />
+          </label>
+          {question.type === "multiple_choice" && (
+            <label>
+              {mn.options}
+              <textarea
+                value={question.options?.join("\n") ?? ""}
+                onChange={(event) => update(index, { options: event.target.value.split("\n") })}
+              />
+            </label>
+          )}
+          <label>
+            {mn.answer}
+            <textarea
+              className="compact-textarea"
+              value={question.answer}
+              maxLength={4000}
+              onChange={(event) => update(index, { answer: event.target.value })}
+            />
+          </label>
+          <label>
+            {mn.explanation}
+            <textarea
+              className="compact-textarea"
+              value={question.explanation}
+              maxLength={4000}
+              onChange={(event) => update(index, { explanation: event.target.value })}
+            />
+          </label>
+        </section>
+      ))}
+      <button
+        type="button"
+        className="button secondary add-question"
+        disabled={questions.length >= 20}
+        onClick={() =>
+          onChange([
+            ...questions,
+            {
+              id: crypto.randomUUID(),
+              type: "short_answer",
+              prompt: "",
+              answer: "",
+              explanation: "",
+              points: 1,
+            },
+          ])
+        }
+      >
+        ＋ {mn.addQuestion}
+      </button>
+    </fieldset>
+  );
 }

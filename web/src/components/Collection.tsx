@@ -20,10 +20,19 @@ export function SetCard({
   const [copyError, setCopyError] = useState("");
   const [copyCount, setCopyCount] = useState(set.copy_count);
   async function copy() {
-    setCopying(true); setCopyMessage(""); setCopyError("");
-    try { await api.copy(set.id); const refreshed = await api.get(set.id); setCopyCount(refreshed.copy_count); setCopyMessage(mn.copied); }
-    catch (failure) { setCopyError(errorMessage(failure)); }
-    finally { setCopying(false); }
+    setCopying(true);
+    setCopyMessage("");
+    setCopyError("");
+    try {
+      await api.copy(set.id);
+      const refreshed = await api.get(set.id);
+      setCopyCount(refreshed.copy_count);
+      setCopyMessage(mn.copied);
+    } catch (failure) {
+      setCopyError(errorMessage(failure));
+    } finally {
+      setCopying(false);
+    }
   }
   return (
     <article className="set-card">
@@ -79,7 +88,29 @@ export function SetCard({
           {extension ? mn.openWeb : "↗"}
         </a>
       </div>
-      {extension && <><button disabled={copying} className="button secondary extension-copy" onClick={() => { void copy(); }}>{copying ? mn.saving : mn.copySet}</button>{copyMessage && <p role="status" className="notice">{copyMessage}</p>}{copyError && <p role="alert" className="notice error">{copyError}</p>}</>}
+      {extension && (
+        <>
+          <button
+            disabled={copying}
+            className="button secondary extension-copy"
+            onClick={() => {
+              void copy();
+            }}
+          >
+            {copying ? mn.saving : mn.copySet}
+          </button>
+          {copyMessage && (
+            <p role="status" className="notice">
+              {copyMessage}
+            </p>
+          )}
+          {copyError && (
+            <p role="alert" className="notice error">
+              {copyError}
+            </p>
+          )}
+        </>
+      )}
     </article>
   );
 }
@@ -233,7 +264,12 @@ export function Collection({
           <span aria-hidden>▤</span>
           <h2>{mn.emptyTitle}</h2>
           <p>{mine ? mn.emptyCollection : mn.emptyLibrary}</p>
-          <a href={`${webBase}/generate`} className="button primary">
+          <a
+            href={`${webBase}/generate`}
+            className="button primary"
+            target={extension ? "_blank" : undefined}
+            rel={extension ? "noreferrer" : undefined}
+          >
             {mn.generate}
           </a>
         </div>

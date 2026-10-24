@@ -7,5 +7,13 @@ import { Shell } from "@/components/Shell";
 
 export const metadata: Metadata = { title: mn.brand, description: mn.description };
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return <html lang="mn"><body><AuthProvider><Shell>{children}</Shell></AuthProvider></body></html>;
+  return (
+    <html lang="mn">
+      <body>
+        <AuthProvider>
+          <Shell>{children}</Shell>
+        </AuthProvider>
+      </body>
+    </html>
+  );
 }

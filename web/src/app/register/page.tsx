@@ -1,2 +1,4 @@
 import { AuthForm } from "@/components/AuthForm";
-export default function RegisterPage() { return <AuthForm register />; }
+export default function RegisterPage() {
+  return <AuthForm register />;
+}

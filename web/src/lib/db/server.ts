@@ -16,7 +16,11 @@ export async function requireTeacher(request: Request): Promise<TeacherContext> 
   });
   const { data, error } = await db.auth.getUser(token);
   if (error || !data.user) throw new ApiError(401, mn.sessionExpired);
-  const { data: teacher, error: profileError } = await db.from("teachers").select("*").eq("id", data.user.id).single();
+  const { data: teacher, error: profileError } = await db
+    .from("teachers")
+    .select("*")
+    .eq("id", data.user.id)
+    .single();
   if (profileError || !teacher) throw new ApiError(503, mn.databaseError);
   return { db, userId: data.user.id, teacher };
 }

@@ -12,7 +12,13 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "resolveJsonModule": true,
     "types": ["node"],
-    "paths": { "~/*": ["./src/*"] }
+    "paths": {
+      "~/*": ["./src/*"],
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"]
+    }
   },
   "include": ["src", "rspack.config.ts", "codegen.ts"]
 }

@@ -102,7 +102,11 @@ function Panel() {
           )}
           <main>
             <div hidden={tab !== "generate"}>
-              <Generator selectedText={selectedText} webBase={__WEB_APP_URL__} active={tab === "generate"} />
+              <Generator
+                selectedText={selectedText}
+                webBase={__WEB_APP_URL__}
+                active={tab === "generate"}
+              />
             </div>
             {tab === "library" && <Collection webBase={__WEB_APP_URL__} extension />}
             {tab === "mine" && <Collection mine webBase={__WEB_APP_URL__} extension />}
