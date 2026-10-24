@@ -4,6 +4,19 @@ packages:
   - web
   - extension
 
+minimumReleaseAgeExclude:
+  - '@anthropic-ai/sdk@1.3.0'
+  - '@next/env@16.4.3'
+  - '@next/swc-darwin-arm64@16.4.3'
+  - '@next/swc-darwin-x64@16.4.3'
+  - '@next/swc-linux-arm64-gnu@16.4.3'
+  - '@next/swc-linux-arm64-musl@16.4.3'
+  - '@next/swc-linux-x64-gnu@16.4.3'
+  - '@next/swc-linux-x64-musl@16.4.3'
+  - '@next/swc-win32-arm64-msvc@16.4.3'
+  - '@next/swc-win32-x64-msvc@16.4.3'
+  - next@16.4.3
+
 overrides:
   react@18: 18.3.1
   react-dom@18: 18.3.1
@@ -11,3 +24,10 @@ overrides:
   '@opentelemetry/api': 1.9.1
   '@opentelemetry/instrumentation': 0.220.0
   '@opentelemetry/sdk-trace-base': 2.12.0
+
+allowBuilds:
+  esbuild: true
+  '@apollo/protobufjs': true
+  aws-sdk: false
+  core-js-pure: false
+  msgpackr-extract: false

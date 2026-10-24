@@ -5,3 +5,7 @@ The requested product is added in `web/` and `extension/` alongside the erxes sc
 ## Phase 1
 
 Next.js, TypeScript, Tailwind, a typed Supabase client, Mongolian strings, and the SQL migration are scaffolded. Run `pnpm dev` for the web app on port 3000. Copy `web/.env.example` to `web/.env.local` and apply the SQL migration to a Supabase project. Authentication and the library arrive in the next phases. No credentials are supplied or invented.
+
+## Phase 2
+
+Added email/password login, registration with teacher details, a protected personal collection, and authenticated bearer-token API routes. Supabase verifies tokens on the server; the UI guard is only a convenience. Run `pnpm dev`, register at `/register`, and visit `/my-sets`. Accounts and persistence are real Supabase operations; missing Supabase configuration produces setup guidance. No auth bypass or mock accounts are enabled.
