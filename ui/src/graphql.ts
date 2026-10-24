@@ -109,6 +109,11 @@ export const CONFIG_QUERY = gql(`
   query homeworkConfig {
     homeworkConfig {
       aiEnabled
+      hasApiKey
+      keyStorageEnabled
+      provider
+      baseUrl
+      supportsPdf
       model
       maxPdfBytes
     }
@@ -222,5 +227,11 @@ export const PROFILE_UPDATE_MUTATION = gql(`
       subjects
       grades
     }
+  }
+`);
+
+export const AI_SETTINGS_SAVE_MUTATION = gql(`
+  mutation homeworkAiSettingsSave($input: HomeworkAiCredentialsInput) {
+    homeworkAiSettingsSave(input: $input)
   }
 `);

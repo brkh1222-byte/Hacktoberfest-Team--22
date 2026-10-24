@@ -136,9 +136,32 @@ export const homeworkTypeDefs = gql`
     grades: [Int!]!
   }
 
+  enum HomeworkAiProvider {
+    anthropic
+    openai
+    gemini
+    openai_compatible
+  }
+
+  input HomeworkAiSettingsInput {
+    provider: HomeworkAiProvider!
+    model: String!
+    baseUrl: String
+  }
+
+  input HomeworkAiCredentialsInput {
+    settings: HomeworkAiSettingsInput!
+    apiKey: String!
+  }
+
   type HomeworkConfig {
-    "False when the deployment has no AI key: generation returns a flagged sample."
+    "True when the signed-in teacher has a saved key and encryption is configured."
     aiEnabled: Boolean!
+    hasApiKey: Boolean!
+    keyStorageEnabled: Boolean!
+    provider: HomeworkAiProvider
+    baseUrl: String
+    supportsPdf: Boolean!
     model: String
     maxPdfBytes: Int!
   }
@@ -161,7 +184,7 @@ export const homeworkTypeDefs = gql`
     topicSummary: String!
     inClass: [HomeworkQuestion!]!
     homework: [HomeworkQuestion!]!
-    "True when no AI key is configured and this is the built-in sample."
+    "Retained for client compatibility; live generation always returns false."
     mocked: Boolean!
   }
 
@@ -195,6 +218,8 @@ export const homeworkTypeDefs = gql`
   }
 
   type Mutation {
+    "Save the signed-in teacher's provider, model and key. Null removes the configuration. The key is never returned."
+    homeworkAiSettingsSave(input: HomeworkAiCredentialsInput): Boolean!
     homeworkGenerate(input: HomeworkGenerationInput!): HomeworkGenerated!
     "Saves the reviewed in-class and homework sets. Retrying with the same requestId returns the first result."
     homeworkGenerationSave(

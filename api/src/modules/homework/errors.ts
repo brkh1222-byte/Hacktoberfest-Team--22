@@ -1,7 +1,18 @@
 import { GraphQLError } from "graphql";
 import { ZodError } from "zod";
 
-type Code = "BAD_USER_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "UNAUTHENTICATED" | "BAD_GATEWAY";
+type Code =
+  | "BAD_USER_INPUT"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "UNAUTHENTICATED"
+  | "BAD_GATEWAY"
+  | "API_KEY_REQUIRED"
+  | "API_KEY_INVALID"
+  | "API_KEY_STORAGE_UNAVAILABLE"
+  | "AI_QUOTA_EXCEEDED"
+  | "AI_PDF_UNSUPPORTED"
+  | "AI_CONFIGURATION_INVALID";
 
 export const fail = (code: Code, message: string): never => {
   throw new GraphQLError(message, { extensions: { code } });

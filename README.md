@@ -11,11 +11,11 @@ It is a standard erxes plugin: teachers use their erxes accounts, data lives
 in the organization's erxes database, and access is granted through erxes
 permissions.
 
-| Part | Path | Stack | Dev port |
-| --- | --- | --- | --- |
-| API | `api` | Node.js 22, erxes-api-shared `startPlugin`, tenant-scoped Mongoose models, Anthropic SDK | 3399 |
-| UI | `ui` | React 18 Module Federation remote (Rspack), erxes-ui, Tailwind | 3099 |
-| Identity | `erxes.json` | Plugin name `homework`, remote `homework_ui`, route `/homework` | |
+| Part     | Path         | Stack                                                                                    | Dev port |
+| -------- | ------------ | ---------------------------------------------------------------------------------------- | -------- |
+| API      | `api`        | Node.js 22, erxes-api-shared `startPlugin`, tenant-scoped Mongoose models and teacher-selected AI providers | 3399     |
+| UI       | `ui`         | React 18 Module Federation remote (Rspack), erxes-ui, Tailwind                           | 3099     |
+| Identity | `erxes.json` | Plugin name `homework`, remote `homework_ui`, route `/homework`                          |          |
 
 ## Selling and installing
 
@@ -23,7 +23,7 @@ permissions.
 `release/homework-<version>/` plus a `.tar.gz` of it. That archive is the
 product: an API Dockerfile with a frozen lockfile, the static UI remote and
 the buyer's guide. The buyer brings their own erxes, MongoDB, Redis, CDN and
-(optionally) Anthropic key; see [docs/installation.md](docs/installation.md).
+(optionally) provider credentials per teacher; see [docs/installation.md](docs/installation.md).
 
 ## Develop against a local erxes
 
@@ -35,17 +35,15 @@ pnpm run dev:ui          # serves http://localhost:3099/remoteEntry.js
 ```
 
 In the erxes checkout's `.env`, set `ENABLED_PLUGINS=...,homework`, restart
-the gateway and core-api, and open `http://localhost:3001/homework`. Without
-`ANTHROPIC_API_KEY`, generation returns a labelled sample, so the whole flow
-can be demoed offline.
+the gateway and core-api, and open `http://localhost:3001/homework`. Set `HOMEWORK_API_KEY_SECRET` in the plugin API environment to enable encrypted storage of each teacher's provider credentials. Teachers then choose a provider and model in Homework settings; the plugin does not use a shared AI key.
 
-| Script | What it does |
-| --- | --- |
-| `pnpm run dev:api` / `dev:ui` | Plugin API and UI in watch mode |
-| `pnpm run codegen` | Print the API schema, generate UI GraphQL types |
-| `pnpm test` | API tests (throwaway `homework_test` database on local MongoDB) and web tests |
-| `pnpm run check` / `lint` / `build` | Type-check, lint and build every package |
-| `pnpm run package` | Build the distributable release |
+| Script                              | What it does                                                                  |
+| ----------------------------------- | ----------------------------------------------------------------------------- |
+| `pnpm run dev:api` / `dev:ui`       | Plugin API and UI in watch mode                                               |
+| `pnpm run codegen`                  | Print the API schema, generate UI GraphQL types                               |
+| `pnpm test`                         | API tests (throwaway `homework_test` database on local MongoDB) and web tests |
+| `pnpm run check` / `lint` / `build` | Type-check, lint and build every package                                      |
+| `pnpm run package`                  | Build the distributable release                                               |
 
 ## How it fits erxes
 
@@ -54,7 +52,7 @@ can be demoed offline.
 - **Data**: `homework_exercise_sets`, `homework_ratings`, `homework_profiles`
   and `homework_uploads` (24-hour TTL), created through `generateModels`.
 - **Permissions**: `homeworkSetsRead`, `homeworkSetsManage`,
-  `homeworkGenerate`, with default *Teacher* and *Homework viewer* groups.
+  `homeworkGenerate`, with default _Teacher_ and _Homework viewer_ groups.
   Resolvers check them, and the models enforce ownership.
 - **Uploads**: PDFs go through the gateway proxy at `/pl:homework/upload`.
 

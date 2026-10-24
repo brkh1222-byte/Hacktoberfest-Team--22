@@ -12,6 +12,12 @@ export const errorText = (error: ApolloError | Error) => {
     if (code === "FORBIDDEN") return mn.forbidden;
     if (code === "NOT_FOUND") return mn.notFound;
     if (code === "BAD_USER_INPUT") return mn.invalidInput;
+    if (code === "API_KEY_REQUIRED") return mn.apiKeyRequired;
+    if (code === "API_KEY_INVALID") return mn.apiKeyInvalid;
+    if (code === "API_KEY_STORAGE_UNAVAILABLE") return mn.apiKeyStorageUnavailable;
+    if (code === "AI_PDF_UNSUPPORTED") return mn.aiPdfUnsupported;
+    if (code === "AI_CONFIGURATION_INVALID") return mn.aiConfigurationInvalid;
+    if (code === "AI_QUOTA_EXCEEDED") return mn.aiQuotaExceeded;
     if (code === "BAD_GATEWAY") return mn.generationError;
     if (error.networkError) return mn.error;
   }
@@ -19,7 +25,11 @@ export const errorText = (error: ApolloError | Error) => {
 };
 
 export const Loading = () => (
-  <div role="status" aria-label={mn.loading} className="homework:flex homework:justify-center homework:py-16">
+  <div
+    role="status"
+    aria-label={mn.loading}
+    className="homework:flex homework:justify-center homework:py-16"
+  >
     <Spinner />
   </div>
 );

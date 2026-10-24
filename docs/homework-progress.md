@@ -6,4 +6,4 @@ For local startup, see the root README: install dependencies, start local MongoD
 
 Teacher passwords are hashed with scrypt. API bearer tokens are signed by the server and expire after seven days. Lesson pair saves are atomic as one MongoDB document. Upload records bind local PDF paths to their owner, and upload files are stored outside git. The extension keeps only the user session token in Chrome storage and talks to the web API.
 
-Live Anthropic generation requires the team's own `ANTHROPIC_API_KEY`. The README documents local API and MongoDB deployment considerations.
+Each teacher configures their own provider, model and API key in Homework settings. The plugin encrypts those credentials at rest and uses them for generation.

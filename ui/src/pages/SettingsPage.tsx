@@ -1,12 +1,17 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { IconSettings } from "@tabler/icons-react";
 import { useState, type FormEvent } from "react";
-import { Badge, Button, Card, Input, useToast } from "erxes-ui";
+import { Badge, Button, Card, Input, Select, useToast } from "erxes-ui";
 import manifest from "../../../erxes.json" with { type: "json" };
 import { Field, PageShell } from "~/components/PageShell";
 import { ErrorState, Loading, errorText } from "~/components/States";
-import type { HomeworkProfileQuery } from "~/gql/graphql";
-import { CONFIG_QUERY, PROFILE_QUERY, PROFILE_UPDATE_MUTATION } from "~/graphql";
+import type { HomeworkConfigQuery, HomeworkAiProvider, HomeworkProfileQuery } from "~/gql/graphql";
+import {
+  AI_SETTINGS_SAVE_MUTATION,
+  CONFIG_QUERY,
+  PROFILE_QUERY,
+  PROFILE_UPDATE_MUTATION,
+} from "~/graphql";
 import { mn } from "~/lib/mn";
 
 const { path } = manifest.ui;
@@ -32,7 +37,15 @@ const ProfileForm = ({ profile }: { profile: Profile }) => {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void save({
-      variables: { input: { fullName: fullName.trim(), school: school.trim(), district: district.trim(), subjects, grades } },
+      variables: {
+        input: {
+          fullName: fullName.trim(),
+          school: school.trim(),
+          district: district.trim(),
+          subjects,
+          grades,
+        },
+      },
     });
   };
 
@@ -107,6 +120,150 @@ const ProfileForm = ({ profile }: { profile: Profile }) => {
   );
 };
 
+const PROVIDERS: { value: HomeworkAiProvider; label: string }[] = [
+  { value: "anthropic", label: "Anthropic" },
+  { value: "openai", label: "OpenAI" },
+  { value: "gemini", label: "Google Gemini" },
+  { value: "openai_compatible", label: "OpenAI-compatible" },
+];
+
+const ApiKeyForm = ({ config }: { config: HomeworkConfigQuery["homeworkConfig"] }) => {
+  const { toast } = useToast();
+  const [provider, setProvider] = useState<HomeworkAiProvider>(config.provider ?? "anthropic");
+  const [model, setModel] = useState(config.model ?? "");
+  const [baseUrl, setBaseUrl] = useState(config.baseUrl ?? "");
+  const [apiKey, setApiKey] = useState("");
+  const [save, { loading, error }] = useMutation(AI_SETTINGS_SAVE_MUTATION, {
+    refetchQueries: [CONFIG_QUERY],
+    awaitRefetchQueries: true,
+  });
+  const submitKey = async (remove = false) => {
+    try {
+      await save({
+        variables: {
+          input: remove
+            ? null
+            : {
+                settings: {
+                  provider,
+                  model: model.trim(),
+                  baseUrl: provider === "openai_compatible" ? baseUrl.trim() : null,
+                },
+                apiKey: apiKey.trim(),
+              },
+        },
+      });
+      setApiKey("");
+      toast({ title: remove ? mn.apiKeyRemoved : mn.apiKeySaved });
+    } catch {
+      // Apollo exposes the controlled error below, without echoing the input.
+    }
+  };
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submitKey();
+      }}
+      className="homework:flex homework:flex-col homework:gap-3"
+    >
+      <p>{mn.apiKeyIntro}</p>
+      {!config.keyStorageEnabled && <p role="alert">{mn.apiKeyStorageUnavailable}</p>}
+      <Field label={mn.aiProvider} htmlFor="homework-ai-provider">
+        <Select
+          value={provider}
+          disabled={loading || !config.keyStorageEnabled}
+          onValueChange={(value) => {
+            setProvider(value as HomeworkAiProvider);
+            setModel("");
+            setBaseUrl("");
+            setApiKey("");
+          }}
+        >
+          <Select.Trigger id="homework-ai-provider">
+            <Select.Value />
+          </Select.Trigger>
+          <Select.Content>
+            {PROVIDERS.map((item) => (
+              <Select.Item key={item.value} value={item.value}>
+                {item.label}
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select>
+      </Field>
+      <Field label={mn.aiModel} htmlFor="homework-ai-model">
+        <Input
+          id="homework-ai-model"
+          value={model}
+          onChange={(event) => setModel(event.target.value)}
+          required
+          maxLength={200}
+          disabled={loading || !config.keyStorageEnabled}
+        />
+      </Field>
+      <p className="homework:text-muted-foreground">{mn.aiModelHint}</p>
+      {provider === "openai_compatible" && (
+        <>
+          <Field label={mn.aiBaseUrl} htmlFor="homework-ai-url">
+            <Input
+              id="homework-ai-url"
+              type="url"
+              value={baseUrl}
+              onChange={(event) => {
+                setBaseUrl(event.target.value);
+                setApiKey("");
+              }}
+              required
+              maxLength={500}
+              disabled={loading || !config.keyStorageEnabled}
+              placeholder="https://provider.example/v1"
+            />
+          </Field>
+          <p className="homework:text-muted-foreground">{mn.aiCompatibleHint}</p>
+        </>
+      )}
+      <Field label={mn.apiKeyLabel} htmlFor="homework-api-key">
+        <Input
+          id="homework-api-key"
+          type="password"
+          autoComplete="new-password"
+          spellCheck={false}
+          value={apiKey}
+          onChange={(event) => setApiKey(event.target.value)}
+          required
+          maxLength={1024}
+          disabled={loading || !config.keyStorageEnabled}
+        />
+      </Field>
+      <p className="homework:text-muted-foreground">{mn.apiKeyPrivacy}</p>
+      {error && (
+        <p role="alert" className="homework:text-destructive">
+          {errorText(error)}
+        </p>
+      )}
+      <div className="homework:flex homework:flex-wrap homework:gap-2">
+        <Button
+          type="submit"
+          disabled={loading || !config.keyStorageEnabled || !apiKey.trim() || !model.trim()}
+        >
+          {loading ? mn.saving : config.hasApiKey ? mn.apiKeyReplace : mn.apiKeySave}
+        </Button>
+        {config.hasApiKey && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={() => void submitKey(true)}
+          >
+            {mn.apiKeyRemove}
+          </Button>
+        )}
+      </div>
+    </form>
+  );
+};
+
 const IDENTITY: [string, string][] = [
   ["Name", manifest.name],
   ["Route", `/${path}`],
@@ -121,7 +278,13 @@ export const SettingsPage = () => {
   const ai = config.data?.homeworkConfig;
 
   return (
-    <PageShell title={mn.settings} icon={IconSettings} iconName="IconSettings" to={`/${path}/settings`} width="md">
+    <PageShell
+      title={mn.settings}
+      icon={IconSettings}
+      iconName="IconSettings"
+      to={`/${path}/settings`}
+      width="md"
+    >
       <Card>
         <Card.Header>
           <Card.Title>{mn.profileHeading}</Card.Title>
@@ -133,7 +296,10 @@ export const SettingsPage = () => {
           ) : !profile.data ? (
             <Loading />
           ) : (
-            <ProfileForm key={profile.data.homeworkProfile.userId} profile={profile.data.homeworkProfile} />
+            <ProfileForm
+              key={profile.data.homeworkProfile.userId}
+              profile={profile.data.homeworkProfile}
+            />
           )}
         </Card.Content>
       </Card>
@@ -151,7 +317,7 @@ export const SettingsPage = () => {
             <>
               <div className="homework:flex homework:items-center homework:gap-2">
                 <Badge variant={ai.aiEnabled ? "success" : "warning"}>
-                  {ai.aiEnabled ? mn.aiLive : mn.aiMockStatus}
+                  {ai.hasApiKey ? mn.apiKeyStored : mn.apiKeyMissing}
                 </Badge>
                 {ai.model && (
                   <span className="homework:text-muted-foreground">
@@ -159,7 +325,10 @@ export const SettingsPage = () => {
                   </span>
                 )}
               </div>
-              {!ai.aiEnabled && <p className="homework:text-muted-foreground">{mn.aiMockHint}</p>}
+              <ApiKeyForm
+                key={`${ai.provider}-${ai.model}-${ai.baseUrl}-${ai.hasApiKey}`}
+                config={ai}
+              />
             </>
           )}
         </Card.Content>

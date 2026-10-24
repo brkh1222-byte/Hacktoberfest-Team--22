@@ -36,10 +36,8 @@ const envSchema = z.object({
   UI_ENTRY_URL: optional,
   LOAD_BALANCER_ADDRESS: optional,
   RELEASE_VERSION: optional,
-  // Unset = generation returns a fixed sample (clearly flagged in the UI), so
-  // the plugin installs and demos without an Anthropic account.
-  ANTHROPIC_API_KEY: optional,
-  HOMEWORK_AI_MODEL: z.string().default("claude-sonnet-5-5"),
+  // 32 random bytes encoded as base64; encrypts teachers' own provider keys.
+  HOMEWORK_API_KEY_SECRET: optional,
 });
 
 export const env = envSchema.parse(process.env);

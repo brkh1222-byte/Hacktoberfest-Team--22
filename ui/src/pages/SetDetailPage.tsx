@@ -4,8 +4,6 @@ import {
   IconClipboardText,
   IconCopy,
   IconEdit,
-  IconEye,
-  IconEyeOff,
   IconFileText,
   IconPrinter,
   IconStar,
@@ -15,10 +13,11 @@ import {
   IconLock,
 } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Button, Card, Input, Select, useConfirm, useToast } from "erxes-ui";
+import { Badge, Button, Card, Input, Select, Tabs, useConfirm, useToast } from "erxes-ui";
 import { Link, useNavigate, useParams } from "react-router";
 import manifest from "../../../erxes.json" with { type: "json" };
 import { Field, PageShell } from "~/components/PageShell";
+import { Solutions } from "~/components/Solutions";
 import { QuestionEditor } from "~/components/QuestionEditor";
 import { ErrorState, Loading, errorText } from "~/components/States";
 import type { HomeworkSetInput } from "~/gql/graphql";
@@ -57,11 +56,21 @@ const EditForm = ({ set, onDone }: { set: ExerciseSet; onDone: () => void }) => 
   });
 
   const submit = async () => {
-    if (!draft.title.trim() || !draft.subject.trim() || !draft.topic.trim() || !questionsValid(draft.questions)) {
+    if (
+      !draft.title.trim() ||
+      !draft.subject.trim() ||
+      !draft.topic.trim() ||
+      !questionsValid(draft.questions)
+    ) {
       return setProblem(mn.invalidQuestions);
     }
     try {
-      await update({ variables: { _id: set._id, input: { ...draft, questions: draft.questions.map(toQuestionInput) } } });
+      await update({
+        variables: {
+          _id: set._id,
+          input: { ...draft, questions: draft.questions.map(toQuestionInput) },
+        },
+      });
       toast({ title: mn.savedSet });
       onDone();
     } catch (error) {
@@ -99,7 +108,10 @@ const EditForm = ({ set, onDone }: { set: ExerciseSet; onDone: () => void }) => 
               max={12}
               value={draft.grade}
               onChange={(event) =>
-                setDraft({ ...draft, grade: Math.min(12, Math.max(1, Math.round(Number(event.target.value) || 1))) })
+                setDraft({
+                  ...draft,
+                  grade: Math.min(12, Math.max(1, Math.round(Number(event.target.value) || 1))),
+                })
               }
             />
           </Field>
@@ -116,13 +128,17 @@ const EditForm = ({ set, onDone }: { set: ExerciseSet; onDone: () => void }) => 
               id="homework-edit-unit"
               value={draft.curriculumUnit ?? ""}
               maxLength={200}
-              onChange={(event) => setDraft({ ...draft, curriculumUnit: event.target.value || null })}
+              onChange={(event) =>
+                setDraft({ ...draft, curriculumUnit: event.target.value || null })
+              }
             />
           </Field>
           <Field label={mn.difficulty} htmlFor="homework-edit-difficulty">
             <Select
               value={draft.difficulty}
-              onValueChange={(value) => setDraft({ ...draft, difficulty: value as HomeworkSetInput["difficulty"] })}
+              onValueChange={(value) =>
+                setDraft({ ...draft, difficulty: value as HomeworkSetInput["difficulty"] })
+              }
             >
               <Select.Trigger id="homework-edit-difficulty">
                 <Select.Value />
@@ -159,7 +175,7 @@ const EditForm = ({ set, onDone }: { set: ExerciseSet; onDone: () => void }) => 
   );
 };
 
-const Worksheet = ({ set, answers }: { set: ExerciseSet; answers: boolean }) => (
+const Worksheet = ({ set }: { set: ExerciseSet }) => (
   <Card>
     <Card.Content className="homework:flex homework:flex-col homework:gap-4 homework:pt-6">
       <div className="homework:flex homework:flex-wrap homework:justify-between homework:gap-2 homework:text-sm homework:text-muted-foreground">
@@ -180,18 +196,15 @@ const Worksheet = ({ set, answers }: { set: ExerciseSet; answers: boolean }) => 
               </span>
             </div>
             {question.options?.length ? (
-              <ol type="A" className="homework:mt-1 homework:list-[upper-alpha] homework:pl-5 homework:text-sm">
+              <ol
+                type="A"
+                className="homework:mt-1 homework:list-[upper-alpha] homework:pl-5 homework:text-sm"
+              >
                 {question.options.map((option, index) => (
                   <li key={`${index}-${option}`}>{option}</li>
                 ))}
               </ol>
             ) : null}
-            {answers && (
-              <div className="homework:mt-2 homework:rounded-md homework:bg-muted homework:p-2 homework:text-sm">
-                <strong>{question.answer}</strong>
-                <p className="homework:text-muted-foreground">{question.explanation}</p>
-              </div>
-            )}
           </li>
         ))}
       </ol>
@@ -205,7 +218,8 @@ const PrintPanel = ({ set }: { set: ExerciseSet }) => {
   const [className, setClassName] = useState("");
   const [date, setDate] = useState("");
   const schoolValue = school ?? data?.homeworkProfile.school ?? "";
-  const print = (answers: boolean) => printWorksheet(set, { answers, school: schoolValue, className, date });
+  const print = (answers: boolean) =>
+    printWorksheet(set, { answers, school: schoolValue, className, date });
 
   return (
     <Card>
@@ -218,13 +232,26 @@ const PrintPanel = ({ set }: { set: ExerciseSet }) => {
       <Card.Content className="homework:flex homework:flex-col homework:gap-3">
         <div className="homework:grid homework:gap-3 homework:sm:grid-cols-3">
           <Field label={mn.school} htmlFor="homework-print-school">
-            <Input id="homework-print-school" value={schoolValue} onChange={(event) => setSchool(event.target.value)} />
+            <Input
+              id="homework-print-school"
+              value={schoolValue}
+              onChange={(event) => setSchool(event.target.value)}
+            />
           </Field>
           <Field label={mn.className} htmlFor="homework-print-class">
-            <Input id="homework-print-class" value={className} onChange={(event) => setClassName(event.target.value)} />
+            <Input
+              id="homework-print-class"
+              value={className}
+              onChange={(event) => setClassName(event.target.value)}
+            />
           </Field>
           <Field label={mn.date} htmlFor="homework-print-date">
-            <Input id="homework-print-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            <Input
+              id="homework-print-date"
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+            />
           </Field>
         </div>
         <div className="homework:flex homework:flex-wrap homework:gap-2">
@@ -256,7 +283,9 @@ const Rating = ({ set }: { set: ExerciseSet }) => {
         <div>
           <p className="homework:font-medium">{mn.rate}</p>
           <p className="homework:text-sm homework:text-muted-foreground">
-            {set.ratingCount ? `${set.ratingAverage.toFixed(1)} / 5 · ${set.ratingCount} ${mn.ratings}` : mn.noRating}
+            {set.ratingCount
+              ? `${set.ratingAverage.toFixed(1)} / 5 · ${set.ratingCount} ${mn.ratings}`
+              : mn.noRating}
           </p>
         </div>
         <div className="homework:flex homework:gap-1">
@@ -288,7 +317,9 @@ export const SetDetailPage = () => {
   const [answers, setAnswers] = useState(false);
   const { data, loading, error, refetch } = useQuery(SET_QUERY, { variables: { _id: id } });
 
-  const notify = { onError: (failure: Error) => toast({ variant: "destructive", title: errorText(failure) }) };
+  const notify = {
+    onError: (failure: Error) => toast({ variant: "destructive", title: errorText(failure) }),
+  };
   const [copy, { loading: copying }] = useMutation(SET_COPY_MUTATION, {
     refetchQueries: [SETS_QUERY],
     onCompleted: ({ homeworkSetCopy }) => {
@@ -346,14 +377,18 @@ export const SetDetailPage = () => {
           <section className="homework:flex homework:flex-col homework:gap-2">
             <div className="homework:flex homework:flex-wrap homework:gap-1.5">
               <Badge variant="info">{set.subject}</Badge>
-              <Badge variant="secondary">{set.grade} {mn.grade}</Badge>
+              <Badge variant="secondary">
+                {set.grade} {mn.grade}
+              </Badge>
               <Badge variant="secondary">{mn.setTypeLabels[set.setType]}</Badge>
               <Badge variant="secondary">{mn.difficultyLabels[set.difficulty]}</Badge>
               <Badge variant={set.visibility === "public" ? "success" : "warning"}>
                 {set.visibility === "public" ? mn.public : mn.private}
               </Badge>
             </div>
-            <h1 className="homework:text-2xl homework:font-semibold homework:tracking-tight">{set.title}</h1>
+            <h1 className="homework:text-2xl homework:font-semibold homework:tracking-tight">
+              {set.title}
+            </h1>
             <p className="homework:text-sm homework:text-muted-foreground">
               {set.topic} · {set.author.fullName}
               {set.author.school && ` · ${set.author.school}`}
@@ -365,15 +400,15 @@ export const SetDetailPage = () => {
           ) : (
             <>
               <div className="homework:flex homework:flex-wrap homework:gap-2">
-                <Button variant="outline" onClick={() => setAnswers(!answers)}>
-                  {answers ? <IconEyeOff /> : <IconEye />}
-                  {answers ? mn.hideAnswers : mn.showAnswers}
-                </Button>
                 <Button variant="outline" onClick={copyText}>
                   <IconClipboardText />
                   {mn.copyText}
                 </Button>
-                <Button variant="outline" disabled={busy} onClick={() => copy({ variables: { _id: set._id } })}>
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => copy({ variables: { _id: set._id } })}
+                >
                   <IconCopy />
                   {mn.copySet}
                 </Button>
@@ -405,7 +440,10 @@ export const SetDetailPage = () => {
                       variant="destructive"
                       disabled={busy}
                       onClick={() =>
-                        confirm({ message: mn.deleteConfirm, options: { okLabel: mn.delete, cancelLabel: mn.cancel } })
+                        confirm({
+                          message: mn.deleteConfirm,
+                          options: { okLabel: mn.delete, cancelLabel: mn.cancel },
+                        })
                           .then(() => remove({ variables: { _id: set._id } }))
                           .catch(() => undefined)
                       }
@@ -416,7 +454,25 @@ export const SetDetailPage = () => {
                   </>
                 )}
               </div>
-              <Worksheet set={set} answers={answers} />
+              <Tabs
+                value={answers ? "solutions" : "problems"}
+                onValueChange={(value) => setAnswers(value === "solutions")}
+              >
+                <Tabs.List variant="segment" aria-label={set.title}>
+                  <Tabs.Trigger variant="segment" value="problems">
+                    {mn.problemsTab}
+                  </Tabs.Trigger>
+                  <Tabs.Trigger variant="segment" value="solutions">
+                    {mn.solutionsTab}
+                  </Tabs.Trigger>
+                </Tabs.List>
+                <Tabs.Content value="problems">
+                  <Worksheet set={set} />
+                </Tabs.Content>
+                <Tabs.Content value="solutions">
+                  <Solutions questions={set.questions} />
+                </Tabs.Content>
+              </Tabs>
               <PrintPanel set={set} />
               {set.visibility === "public" && <Rating set={set} />}
             </>

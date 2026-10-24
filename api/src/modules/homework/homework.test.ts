@@ -5,7 +5,9 @@ import type { IUserDocument } from "erxes-api-shared/core-types";
 import mongoose from "mongoose";
 import { generateModels, type Context, type IModels } from "../../connectionResolvers.ts";
 import { GENERATE, SETS_MANAGE, SETS_READ } from "../../permissions.ts";
-import { generateExerciseSets, generateValidated } from "./ai/generate.ts";
+import { generateValidated } from "./ai/generate.ts";
+import { createCompletion } from "./ai/providers.ts";
+import { aiCredentialsSchema } from "./ai/settings.ts";
 import { mockExerciseSets } from "./ai/mock.ts";
 import { isPdf, MAX_PDF_BYTES } from "./db/models/Uploads.ts";
 import { homeworkResolvers } from "./graphql/resolvers.ts";
@@ -75,9 +77,34 @@ describe("generation", () => {
     assert.doesNotThrow(() => generatedSetsSchema.parse(sets));
   });
 
-  test("without an API key generation returns the flagged sample", async () => {
-    const result = await generateExerciseSets(input);
-    assert.equal(result.mocked, true);
+  test("provider completions use the teacher's saved key and selected model", async () => {
+    const sample = mockExerciseSets(input);
+    let requestUrl = "";
+    let requestHeaders: Record<string, string> = {};
+    let requestBody: unknown;
+    const credentials = aiCredentialsSchema.parse({
+      settings: { provider: "anthropic", model: "teacher-selected-model" },
+      apiKey: "test-only-teacher-key",
+    });
+    const complete = createCompletion(credentials, undefined, async (url, headers, body) => {
+      requestUrl = url;
+      requestHeaders = headers;
+      requestBody = body;
+      return {
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: JSON.stringify({
+          title: sample.title,
+          topic_summary: sample.topicSummary,
+          in_class: sample.inClass,
+          homework: sample.homework,
+        }) }],
+      };
+    });
+    const result = await generateValidated(input, complete);
+    assert.equal(result.inClass.length, input.inClassCount);
+    assert.equal(requestUrl, "https://api.anthropic.com/v1/messages");
+    assert.equal(requestHeaders["x-api-key"], "test-only-teacher-key");
+    assert.equal((requestBody as { model: string }).model, "teacher-selected-model");
   });
 
   test("invalid JSON is retried once and a valid second response is accepted", async () => {

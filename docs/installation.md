@@ -16,19 +16,19 @@ may do what.
 - erxes 3.3.2 or later (the plugin targets the 3.3.x shared-library baseline)
 - The same Redis and MongoDB your erxes gateway and core-api use
 - A static host or CDN for the UI files, reachable from your users' browsers
-- Optional: an Anthropic API key for live generation. Without one, the plugin
-  works end to end and generation returns a clearly labelled sample.
+- Teachers enter their own provider API credentials in Homework settings.
+  Configure `HOMEWORK_API_KEY_SECRET` to encrypt these credentials at rest.
 
 ## What is in the release
 
-| Path | Contents |
-| --- | --- |
-| `Dockerfile` | Builds the API image; installs exact dependency versions from `api/pnpm-lock.yaml` |
-| `api/` | Compiled API (`dist/`) with its lockfile |
-| `ui/` | The UI remote; upload the whole folder |
-| `erxes.json` | Plugin identity (`homework`, remote `homework_ui`, route `/homework`) |
-| `.env.example` | API configuration |
-| `release.json` | Version metadata |
+| Path           | Contents                                                                           |
+| -------------- | ---------------------------------------------------------------------------------- |
+| `Dockerfile`   | Builds the API image; installs exact dependency versions from `api/pnpm-lock.yaml` |
+| `api/`         | Compiled API (`dist/`) with its lockfile                                           |
+| `ui/`          | The UI remote; upload the whole folder                                             |
+| `erxes.json`   | Plugin identity (`homework`, remote `homework_ui`, route `/homework`)              |
+| `.env.example` | API configuration                                                                  |
+| `release.json` | Version metadata                                                                   |
 
 ## 1. Publish the UI
 
@@ -55,15 +55,14 @@ docker run -d --name plugin-homework-api --network <erxes-network> \
 
 Copy `.env.example` to `.env` and set:
 
-| Variable | Required | Meaning |
-| --- | --- | --- |
-| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | yes | The Redis erxes uses; the plugin registers with the gateway through it |
-| `MONGO_URL` | yes | The MongoDB erxes uses |
-| `UI_ENTRY_URL` | yes | Browser URL of `remoteEntry.js` from step 1 |
-| `LOAD_BALANCER_ADDRESS` | no | How the gateway reaches the API; defaults to `http://plugin-homework-api:80` |
-| `ANTHROPIC_API_KEY` | no | Enables live generation |
-| `HOMEWORK_AI_MODEL` | no | Model id, default `claude-sonnet-5-5` |
-| `VERSION` | no | `saas` on multi-tenant erxes |
+| Variable                                     | Required             | Meaning                                                                                                         |
+| -------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | yes                  | The Redis erxes uses; the plugin registers with the gateway through it                                          |
+| `MONGO_URL`                                  | yes                  | The MongoDB erxes uses                                                                                          |
+| `UI_ENTRY_URL`                               | yes                  | Browser URL of `remoteEntry.js` from step 1                                                                     |
+| `LOAD_BALANCER_ADDRESS`                      | no                   | How the gateway reaches the API; defaults to `http://plugin-homework-api:80`                                    |
+| `HOMEWORK_API_KEY_SECRET`                    | required for live AI | Base64-encoded 32-byte encryption key for teacher provider credentials; generate with `openssl rand -base64 32` |
+| `VERSION`                                    | no                   | `saas` on multi-tenant erxes                                                                                    |
 
 The container listens on port 80 and answers `GET /health`. **Keep that port
 on the private network**: the gateway forwards the signed-in user as request
@@ -87,10 +86,10 @@ ENABLED_PLUGINS=...,homework
 Organization owners have full access. For everyone else, an administrator
 assigns one of the plugin's permission groups in Settings → Permissions:
 
-| Group | Can |
-| --- | --- |
-| Teacher | Browse, print, generate, save, edit, publish, copy, rate and delete their own sets |
-| Homework viewer | Browse and print shared sets |
+| Group           | Can                                                                                |
+| --------------- | ---------------------------------------------------------------------------------- |
+| Teacher         | Browse, print, generate, save, edit, publish, copy, rate and delete their own sets |
+| Homework viewer | Browse and print shared sets                                                       |
 
 The underlying actions are `homeworkSetsRead`, `homeworkSetsManage` and
 `homeworkGenerate`. Teachers always edit only their own sets and see other
@@ -100,15 +99,14 @@ teachers' sets only when those are published to the organization's library.
 
 All data is stored in the organization's erxes database:
 
-| Collection | Contents |
-| --- | --- |
-| `homework_exercise_sets` | Sets and their questions |
-| `homework_ratings` | One rating per teacher per set |
-| `homework_profiles` | Each teacher's school, district, subjects and grades |
-| `homework_uploads` | Lesson PDFs while they are being used; deleted automatically after 24 hours |
+| Collection               | Contents                                                                    |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `homework_exercise_sets` | Sets and their questions                                                    |
+| `homework_ratings`       | One rating per teacher per set                                              |
+| `homework_profiles`      | Each teacher's school, district, subjects and grades                        |
+| `homework_uploads`       | Lesson PDFs while they are being used; deleted automatically after 24 hours |
 
-Back them up with the rest of your erxes database. Lesson text and PDFs are
-sent to Anthropic only when `ANTHROPIC_API_KEY` is set.
+Back them up with the rest of your erxes database. Teachers choose a provider, model and API key in Homework settings. Credentials are encrypted in `homework_profiles` with AES-256-GCM using `HOMEWORK_API_KEY_SECRET`; this secret must be backed up separately and kept private. The plugin sends lesson text and PDFs only to the teacher-selected provider. OpenAI-compatible custom endpoints must use public HTTPS; custom endpoints support lesson text, while PDF support is limited to Anthropic, OpenAI and Gemini provider integrations.
 
 ## Local demo
 

@@ -1,9 +1,11 @@
+import { ProviderError, validateEndpoint } from "../ai/transport.ts";
+import { aiCredentialsSchema } from "../ai/settings.ts";
+import { keyStorageEnabled } from "../ai/credentials.ts";
 import type { IUserDocument } from "erxes-api-shared/core-types";
 import { z } from "zod";
-import { env } from "../../../config.ts";
 import type { Context } from "../../../connectionResolvers.ts";
 import { GENERATE, SETS_MANAGE, SETS_READ } from "../../../permissions.ts";
-import { aiEnabled, generateExerciseSets } from "../ai/generate.ts";
+import { generateExerciseSets } from "../ai/generate.ts";
 import type { IExerciseSet, IProfile } from "../db/definitions/homework.ts";
 import { MAX_PDF_BYTES } from "../db/models/Uploads.ts";
 import { fail, parseInput } from "../errors.ts";
@@ -77,7 +79,10 @@ export const homeworkResolvers = {
     },
     myRating: async (set: SetSource, _args: unknown, { models, user }: Context) => {
       if (!user?._id) return null;
-      const rating = await models.Ratings.findOne({ setId: String(set._id), userId: user._id }).lean();
+      const rating = await models.Ratings.findOne({
+        setId: String(set._id),
+        userId: user._id,
+      }).lean();
       return rating?.stars ?? null;
     },
   },
@@ -100,29 +105,74 @@ export const homeworkResolvers = {
     },
 
     homeworkConfig: async (_parent: unknown, _args: unknown, context: Context) => {
-      await authorize(context, SETS_READ);
+      const user = await authorize(context, SETS_READ);
+      const settings = await context.models.Profiles.getAiSettings(user._id);
+      const hasApiKey = settings !== null;
       return {
-        aiEnabled: aiEnabled(),
-        model: aiEnabled() ? env.HOMEWORK_AI_MODEL : null,
+        aiEnabled: keyStorageEnabled() && hasApiKey,
+        hasApiKey,
+        keyStorageEnabled: keyStorageEnabled(),
+        provider: settings?.provider ?? null,
+        model: settings?.model ?? null,
+        baseUrl: settings?.baseUrl ?? null,
+        supportsPdf: settings !== null && settings.provider !== "openai_compatible",
         maxPdfBytes: MAX_PDF_BYTES,
       };
     },
   },
 
   Mutation: {
+    homeworkAiSettingsSave: async (
+      _parent: unknown,
+      args: { input: unknown },
+      context: Context,
+    ) => {
+      const user = await authorize(context, GENERATE);
+      const credentials = parseInput(() => aiCredentialsSchema.nullable().parse(args.input));
+      if (credentials?.settings.baseUrl) {
+        try {
+          await validateEndpoint(credentials.settings.baseUrl);
+        } catch {
+          return fail("AI_CONFIGURATION_INVALID", "Use a public HTTPS API endpoint.");
+        }
+      }
+      await context.models.Profiles.getOrCreate(user);
+      await context.models.Profiles.saveAiCredentials(user._id, credentials);
+      return true;
+    },
+
     homeworkGenerate: async (_parent: unknown, args: { input: unknown }, context: Context) => {
       const user = await authorize(context, GENERATE);
       const input = parseInput(() => generationInputSchema.parse(args.input));
+      const credentials = await context.models.Profiles.readAiCredentials(user._id);
+      if (input.uploadId && credentials.settings.provider === "openai_compatible")
+        return fail("AI_PDF_UNSUPPORTED", "Use lesson text with this provider connection.");
       const pdf = input.uploadId
         ? await context.models.Uploads.readPdf(user._id, input.uploadId)
         : undefined;
 
       try {
-        return await generateExerciseSets(input, pdf);
+        return await generateExerciseSets(input, credentials, pdf);
       } catch (error) {
-        // Provider errors can echo lesson content; log the reason only.
-        console.error(`[homework] generation failed: ${error instanceof Error ? error.message : "unknown"}`);
-        return fail("BAD_GATEWAY", "Could not generate exercises. Check the lesson content and try again.");
+        // Never log provider messages: they may contain credentials or lesson content.
+        if (error instanceof ProviderError) {
+          if (error.status === 401 || error.status === 403)
+            return fail("API_KEY_INVALID", "Check your provider API key in Settings.");
+          if (error.status === 400 || error.status === 404 || error.status === 422)
+            return fail(
+              "AI_CONFIGURATION_INVALID",
+              "Check the provider, model, endpoint and supported input type in Settings.",
+            );
+          if (error.status === 429 || error.status === 402)
+            return fail(
+              "AI_QUOTA_EXCEEDED",
+              "Check your provider account's balance and rate limits.",
+            );
+        }
+        return fail(
+          "BAD_GATEWAY",
+          "Could not generate exercises. Check the lesson content and try again.",
+        );
       }
     },
 

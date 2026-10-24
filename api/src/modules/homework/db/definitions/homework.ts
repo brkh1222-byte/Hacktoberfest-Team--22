@@ -1,3 +1,4 @@
+import { AI_PROVIDERS, type AiSettings } from "../../ai/settings.ts";
 import { schemaWrapper } from "erxes-api-shared/utils";
 import { Schema, type Document } from "mongoose";
 import {
@@ -147,6 +148,8 @@ export interface IProfile {
 
 export interface IProfileDocument extends IProfile, Document<string> {
   _id: string;
+  encryptedApiKey?: string;
+  aiSettings?: AiSettings;
 }
 
 // erxes owns identity. This only adds what a teacher's worksheets and the
@@ -158,6 +161,19 @@ export const profileSchema = schemaWrapper(
       fullName: { type: String, required: true },
       school: { type: String, default: "" },
       district: { type: String, default: "" },
+      encryptedApiKey: { type: String, select: false },
+      aiSettings: {
+        type: new Schema(
+          {
+            provider: { type: String, enum: AI_PROVIDERS, required: true },
+            model: { type: String, required: true },
+            baseUrl: { type: String, default: null },
+          },
+          { _id: false },
+        ),
+        default: undefined,
+        select: false,
+      },
       subjects: { type: [String], default: [] },
       grades: { type: [Number], default: [] },
     },

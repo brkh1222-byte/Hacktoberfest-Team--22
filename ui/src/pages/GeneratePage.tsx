@@ -7,12 +7,23 @@ import {
   IconUpload,
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Alert, Badge, Button, Card, Input, Select, Spinner, Tabs, Textarea, useToast } from "erxes-ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Input,
+  Select,
+  Spinner,
+  Tabs,
+  Textarea,
+  useToast,
+} from "erxes-ui";
 import { Link } from "react-router";
 import manifest from "../../../erxes.json" with { type: "json" };
 import { Field, PageShell } from "~/components/PageShell";
 import { QuestionEditor } from "~/components/QuestionEditor";
-import { errorText } from "~/components/States";
+import { ErrorState, Loading, errorText } from "~/components/States";
 import type { HomeworkGenerateMutation, HomeworkGenerationInput } from "~/gql/graphql";
 import { CONFIG_QUERY, GENERATE_MUTATION, SAVE_GENERATION_MUTATION, SETS_QUERY } from "~/graphql";
 import { mn } from "~/lib/mn";
@@ -25,7 +36,13 @@ const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
 type Source = HomeworkGenerationInput["sourceType"];
 type Difficulty = HomeworkGenerationInput["difficulty"];
-type Draft = { title: string; topicSummary: string; mocked: boolean; inClass: Question[]; homework: Question[] };
+type Draft = {
+  title: string;
+  topicSummary: string;
+  mocked: boolean;
+  inClass: Question[];
+  homework: Question[];
+};
 
 const toDraft = (generated: HomeworkGenerateMutation["homeworkGenerate"]): Draft => ({
   title: generated.title,
@@ -39,7 +56,12 @@ const clampCount = (value: string) => Math.min(20, Math.max(1, Math.round(Number
 
 export const GeneratePage = () => {
   const { toast } = useToast();
-  const { data: configData } = useQuery(CONFIG_QUERY);
+  const {
+    data: configData,
+    loading: configLoading,
+    error: configError,
+    refetch: refetchConfig,
+  } = useQuery(CONFIG_QUERY, { fetchPolicy: "network-only" });
   const [subject, setSubject] = useState<string>(mn.subjects[0]);
   const [grade, setGrade] = useState(5);
   const [topic, setTopic] = useState("");
@@ -101,9 +123,12 @@ export const GeneratePage = () => {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setProblem("");
+    if (!configData?.homeworkConfig.aiEnabled) return setProblem(mn.apiKeyRequired);
     recordingRef.current?.stop();
     setRecording(false);
 
+    if (source === "pdf" && !configData?.homeworkConfig.supportsPdf)
+      return setProblem(mn.aiPdfUnsupported);
     if (source === "pdf" && !file) return setProblem(mn.pdfRequired);
     if (source !== "pdf" && inputText.trim().length < 10) return setProblem(mn.invalidInput);
     if (!topic.trim()) return setProblem(mn.invalidInput);
@@ -133,7 +158,10 @@ export const GeneratePage = () => {
       setDraft(toDraft(data.homeworkGenerate));
       setSaved(null);
       requestId.current = crypto.randomUUID();
-      setTimeout(() => reviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+      setTimeout(
+        () => reviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        50,
+      );
     } catch (error) {
       setProblem(errorText(error as Error));
     }
@@ -171,14 +199,39 @@ export const GeneratePage = () => {
   const config = configData?.homeworkConfig;
 
   return (
-    <PageShell title={mn.generate} icon={IconSparkles} iconName="IconSparkles" to={`/${path}/generate`} width="md">
+    <PageShell
+      title={mn.generate}
+      icon={IconSparkles}
+      iconName="IconSparkles"
+      to={`/${path}/generate`}
+      width="md"
+    >
       <section className="homework:flex homework:flex-col homework:gap-1">
         <div className="homework:flex homework:items-center homework:gap-2">
-          <h1 className="homework:text-2xl homework:font-semibold homework:tracking-tight">{mn.generationHeading}</h1>
-          {config && !config.aiEnabled && <Badge variant="warning">{mn.aiMockStatus}</Badge>}
+          <h1 className="homework:text-2xl homework:font-semibold homework:tracking-tight">
+            {mn.generationHeading}
+          </h1>
+          {config && !config.aiEnabled && <Badge variant="warning">{mn.apiKeyMissing}</Badge>}
         </div>
         <p className="homework:text-sm homework:text-muted-foreground">{mn.generationIntro}</p>
       </section>
+
+      {configError ? (
+        <ErrorState error={configError} onRetry={() => refetchConfig()} />
+      ) : configLoading ? (
+        <Loading />
+      ) : config && !config.aiEnabled ? (
+        <Alert variant="warning">
+          <Alert.Title>
+            {config.keyStorageEnabled ? mn.apiKeyRequired : mn.apiKeyStorageUnavailable}
+          </Alert.Title>
+          <Alert.Description>
+            <Link to={`/${path}/settings`} className="homework:underline">
+              {mn.openSettings}
+            </Link>
+          </Alert.Description>
+        </Alert>
+      ) : null}
 
       <form onSubmit={submit}>
         <fieldset disabled={busy} className="homework:flex homework:flex-col homework:gap-4">
@@ -203,7 +256,11 @@ export const GeneratePage = () => {
                   </Select>
                 </Field>
                 <Field label={mn.grade} htmlFor="homework-grade">
-                  <Select value={String(grade)} onValueChange={(value) => setGrade(Number(value))} disabled={busy}>
+                  <Select
+                    value={String(grade)}
+                    onValueChange={(value) => setGrade(Number(value))}
+                    disabled={busy}
+                  >
                     <Select.Trigger id="homework-grade">
                       <Select.Value />
                     </Select.Trigger>
@@ -237,14 +294,29 @@ export const GeneratePage = () => {
             <Card.Content className="homework:flex homework:flex-col homework:gap-3">
               <Tabs value={source} onValueChange={(value) => setSource(value as Source)}>
                 <Tabs.List variant="segment">
-                  <Tabs.Trigger variant="segment" value="text">{mn.textTab}</Tabs.Trigger>
-                  <Tabs.Trigger variant="segment" value="pdf">{mn.pdfTab}</Tabs.Trigger>
-                  <Tabs.Trigger variant="segment" value="voice">{mn.voiceTab}</Tabs.Trigger>
+                  <Tabs.Trigger variant="segment" value="text">
+                    {mn.textTab}
+                  </Tabs.Trigger>
+                  <Tabs.Trigger variant="segment" value="pdf" disabled={!config?.supportsPdf}>
+                    {mn.pdfTab}
+                  </Tabs.Trigger>
+                  <Tabs.Trigger variant="segment" value="voice">
+                    {mn.voiceTab}
+                  </Tabs.Trigger>
                 </Tabs.List>
               </Tabs>
+              {config && !config.supportsPdf && (
+                <p className="homework:text-sm homework:text-muted-foreground">
+                  {mn.aiPdfUnsupported}
+                </p>
+              )}
               {source === "pdf" && (
                 <label className="homework:flex homework:cursor-pointer homework:flex-col homework:items-center homework:gap-2 homework:rounded-lg homework:border homework:border-dashed homework:border-border homework:p-6 homework:text-center homework:text-sm">
-                  {file ? <IconFileTypePdf className="homework:size-6" /> : <IconUpload className="homework:size-6" />}
+                  {file ? (
+                    <IconFileTypePdf className="homework:size-6" />
+                  ) : (
+                    <IconUpload className="homework:size-6" />
+                  )}
                   <span className="homework:font-medium">{file?.name ?? mn.pdfLabel}</span>
                   <span className="homework:text-muted-foreground">{mn.pdfHint}</span>
                   <input
@@ -253,7 +325,11 @@ export const GeneratePage = () => {
                     className="homework:sr-only"
                     onChange={(event) => {
                       const next = event.target.files?.[0] ?? null;
-                      if (next && (next.size > (config?.maxPdfBytes ?? MAX_PDF_BYTES) || next.type !== "application/pdf")) {
+                      if (
+                        next &&
+                        (next.size > (config?.maxPdfBytes ?? MAX_PDF_BYTES) ||
+                          next.type !== "application/pdf")
+                      ) {
                         setFile(null);
                         setProblem(mn.pdfInvalid);
                         event.target.value = "";
@@ -276,7 +352,11 @@ export const GeneratePage = () => {
                     {recording ? mn.stopRecording : mn.startRecording}
                   </Button>
                   <p role="status" className="homework:text-sm homework:text-muted-foreground">
-                    {recording ? mn.listening : speechAvailable ? mn.speechHint : mn.speechUnsupported}
+                    {recording
+                      ? mn.listening
+                      : speechAvailable
+                        ? mn.speechHint
+                        : mn.speechUnsupported}
                   </p>
                 </div>
               )}
@@ -299,7 +379,11 @@ export const GeneratePage = () => {
           <Card>
             <Card.Content className="homework:grid homework:gap-3 homework:pt-4 homework:sm:grid-cols-3">
               <Field label={mn.difficulty} htmlFor="homework-difficulty">
-                <Select value={difficulty} onValueChange={(value) => setDifficulty(value as Difficulty)} disabled={busy}>
+                <Select
+                  value={difficulty}
+                  onValueChange={(value) => setDifficulty(value as Difficulty)}
+                  disabled={busy}
+                >
                   <Select.Trigger id="homework-difficulty">
                     <Select.Value />
                   </Select.Trigger>
@@ -332,11 +416,17 @@ export const GeneratePage = () => {
                   onChange={(event) => setHomeworkCount(clampCount(event.target.value))}
                 />
               </Field>
-              <p className="homework:text-sm homework:text-muted-foreground homework:sm:col-span-3">{mn.countHint}</p>
+              <p className="homework:text-sm homework:text-muted-foreground homework:sm:col-span-3">
+                {mn.countHint}
+              </p>
             </Card.Content>
           </Card>
 
-          <Button type="submit" size="lg" disabled={busy}>
+          <Button
+            type="submit"
+            size="lg"
+            disabled={busy || configLoading || !!configError || !config?.aiEnabled}
+          >
             {generating || uploading ? <Spinner size="sm" /> : <IconSparkles />}
             {uploading ? mn.pdfUploading : generating ? mn.generating : mn.generateAction}
           </Button>
@@ -387,10 +477,14 @@ export const GeneratePage = () => {
               <Alert.Title>{mn.saved}</Alert.Title>
               <Alert.Description className="homework:mt-2 homework:flex homework:flex-wrap homework:gap-2">
                 <Button variant="outline" asChild>
-                  <Link to={`/${path}/sets/${saved.inClassSetId}`}>{mn.setTypeLabels.in_class}</Link>
+                  <Link to={`/${path}/sets/${saved.inClassSetId}`}>
+                    {mn.setTypeLabels.in_class}
+                  </Link>
                 </Button>
                 <Button variant="outline" asChild>
-                  <Link to={`/${path}/sets/${saved.homeworkSetId}`}>{mn.setTypeLabels.homework}</Link>
+                  <Link to={`/${path}/sets/${saved.homeworkSetId}`}>
+                    {mn.setTypeLabels.homework}
+                  </Link>
                 </Button>
               </Alert.Description>
             </Alert>
